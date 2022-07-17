@@ -33,6 +33,10 @@
 #include <cstdlib>
 #include <cstdio>
 
+#include "ns3/pointer.h"
+#include "ns3/string.h"
+#include "ns3/boolean.h"
+
 namespace ns3 {
 
 NS_LOG_COMPONENT_DEFINE ("UdpClient");
@@ -69,6 +73,16 @@ UdpClient::GetTypeId (void)
                    UintegerValue (1024),
                    MakeUintegerAccessor (&UdpClient::m_size),
                    MakeUintegerChecker<uint32_t> (12,65507))
+    .AddAttribute ("EnableRandom",
+                   "For random traffic instead of CBR",
+                   BooleanValue (false),
+                   MakeBooleanAccessor (&UdpClient::m_enableRandom),
+                   MakeBooleanChecker ())
+    .AddAttribute ("IntervalRandomVariable",
+                   "For random interval distribution instead of constant",
+                   StringValue ("ns3::ConstantRandomVariable[Constant=1.0]"),
+                   MakePointerAccessor (&UdpClient::m_intervalRandomVariable),
+                   MakePointerChecker<RandomVariableStream> ())
   ;
   return tid;
 }
@@ -220,7 +234,14 @@ UdpClient::Send (void)
 
   if (m_sent < m_count)
     {
-      m_sendEvent = Simulator::Schedule (m_interval, &UdpClient::Send, this);
+      if (m_enableRandom)
+        {
+          m_sendEvent = Simulator::Schedule (Seconds(m_intervalRandomVariable->GetValue()), &UdpClient::Send, this);
+        }
+      else
+        {
+          m_sendEvent = Simulator::Schedule (m_interval, &UdpClient::Send, this);
+        }
     }
 }
 

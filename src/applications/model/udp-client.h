@@ -28,6 +28,8 @@
 #include "ns3/ptr.h"
 #include "ns3/ipv4-address.h"
 
+#include "ns3/random-variable-stream.h"
+
 namespace ns3 {
 
 class Socket;
@@ -86,6 +88,9 @@ private:
   uint32_t m_count; //!< Maximum number of packets the application will send
   Time m_interval; //!< Packet inter-send time
   uint32_t m_size; //!< Size of the sent packet (including the SeqTsHeader)
+
+  bool m_enableRandom; //!< Enable random distribution
+  Ptr<RandomVariableStream> m_intervalRandomVariable; //!< Random variable for inter-packet interval
 
   uint32_t m_sent; //!< Counter for sent packets
   uint64_t m_totalTx; //!< Total bytes sent
