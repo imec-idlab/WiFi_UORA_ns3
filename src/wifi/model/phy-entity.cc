@@ -38,6 +38,8 @@ namespace ns3 {
 
 NS_LOG_COMPONENT_DEFINE ("PhyEntity");
 
+NS_OBJECT_ENSURE_REGISTERED (PhyEntity);
+
 std::ostream & operator << (std::ostream &os, const PhyEntity::PhyRxFailureAction &action)
 {
   switch (action)
@@ -72,6 +74,20 @@ std::ostream & operator << (std::ostream &os, const PhyEntity::PhyFieldRxStatus 
 
 uint64_t PhyEntity::m_globalPpduUid = 0;
 
+TypeId
+PhyEntity::GetTypeId (void)
+{
+  static TypeId tid = TypeId ("ns3::PhyEntity")
+    .SetParent<Object> ()
+    .SetGroupName ("Wifi")
+    .AddTraceSource ("SinrTrace",
+                     "Trace SINR value for payload receiption",
+                     MakeTraceSourceAccessor (&PhyEntity::m_sinrTrace),
+                     "ns3::PhyEntity::SinrTrace")
+    ;
+  return tid;
+}
+
 PhyEntity::~PhyEntity ()
 {
   NS_LOG_FUNCTION (this);
@@ -85,6 +101,13 @@ PhyEntity::SetOwner (Ptr<WifiPhy> wifiPhy)
   NS_LOG_FUNCTION (this << wifiPhy);
   m_wifiPhy = wifiPhy;
   m_state = m_wifiPhy->m_state;
+}
+
+void
+PhyEntity::SetModulationClass (WifiModulationClass modulation)
+{
+  NS_LOG_FUNCTION (this << modulation);
+  m_modulation = modulation;
 }
 
 bool
@@ -707,7 +730,10 @@ PhyEntity::GetReceptionStatus (Ptr<const WifiPsdu> psdu, Ptr<Event> event, uint1
   SnrPer snrPer = m_wifiPhy->m_interference->CalculatePayloadSnrPer (event, channelWidthAndBand.first, channelWidthAndBand.second, staId,
                                                                     std::make_pair (relativeMpduStart, relativeMpduStart + mpduDuration));
 
+  m_sinrTrace (RatioToDb(snrPer.snr), staId);
+
   WifiMode mode = event->GetTxVector ().GetMode (staId);
+
   NS_LOG_DEBUG ("rate=" << (mode.GetDataRate (event->GetTxVector (), staId)) <<
                 ", SNR(dB)=" << RatioToDb (snrPer.snr) << ", PER=" << snrPer.per << ", size=" << psdu->GetSize () <<
                 ", relativeStart = " << relativeMpduStart.As (Time::NS) << ", duration = " << mpduDuration.As (Time::NS));

@@ -30,9 +30,10 @@
 #include "wifi-mpdu-type.h"
 #include "wifi-ppdu.h"
 #include "ns3/event-id.h"
-#include "ns3/simple-ref-count.h"
+#include "ns3/object.h"
 #include "ns3/nstime.h"
 #include "ns3/wifi-spectrum-value-helper.h"
+#include "ns3/traced-callback.h"
 #include <list>
 #include <map>
 #include <tuple>
@@ -90,9 +91,15 @@ class WifiPpdu;
  * to be used by each PHY entity, corresponding to
  * the different amendments of the IEEE 802.11 standard.
  */
-class PhyEntity : public SimpleRefCount<PhyEntity>
+class PhyEntity : public Object //SimpleRefCount<PhyEntity>
 {
 public:
+
+  /**
+   * \brief Get the type ID.
+   * \return the object TypeId
+   */
+  static TypeId GetTypeId (void);
 
   /**
    * Action to perform in case of RX failure.
@@ -161,6 +168,13 @@ public:
    * \param wifiPhy the WifiPhy owning this PHY entity
    */
   void SetOwner (Ptr<WifiPhy> wifiPhy);
+
+  /**
+   * Set WiFi Modulation class.
+   *
+   * \param modulation WifiModulationClass of the entity
+   */
+  void SetModulationClass (WifiModulationClass modulation);
 
   /**
    * Check if the WifiMode is supported.
@@ -811,6 +825,7 @@ protected:
   std::tuple<double, double, double> GetTxMaskRejectionParams (void) const;
 
   Ptr<WifiPhy> m_wifiPhy;          //!< Pointer to the owning WifiPhy
+  WifiModulationClass m_modulation;
   Ptr<WifiPhyStateHelper> m_state; //!< Pointer to WifiPhyStateHelper of the WifiPhy (to make it reachable for child classes)
 
   std::list<WifiMode> m_modeList;  //!< the list of supported modes
@@ -829,6 +844,8 @@ protected:
   std::map<UidStaIdPair, SignalNoiseDbm> m_signalNoiseMap; //!< Map of the latest signal power and noise power in dBm (noise power includes the noise figure)
 
   static uint64_t m_globalPpduUid; //!< Global counter of the PPDU UID
+
+  TracedCallback<double, uint16_t> m_sinrTrace;
 }; //class PhyEntity
 
 /**

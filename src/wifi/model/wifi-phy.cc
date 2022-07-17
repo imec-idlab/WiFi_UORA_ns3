@@ -670,6 +670,7 @@ WifiPhy::AddPhyEntity (WifiModulationClass modulation, Ptr<PhyEntity> phyEntity)
   NS_ABORT_MSG_IF (GetStaticPhyEntities ().find (modulation) == GetStaticPhyEntities ().end (), "Cannot add an unimplemented PHY to supported list. Update the former first.");
   NS_ASSERT_MSG (m_phyEntities.find (modulation) == m_phyEntities.end (), "The PHY entity has already been added. The setting should only be done once per modulation class");
   phyEntity->SetOwner (this);
+  phyEntity->SetModulationClass (modulation);
   m_phyEntities[modulation] = phyEntity;
 }
 
@@ -725,7 +726,7 @@ void
 WifiPhy::Configure80211a (void)
 {
   NS_LOG_FUNCTION (this);
-  AddPhyEntity (WIFI_MOD_CLASS_OFDM, Create<OfdmPhy> ());
+  AddPhyEntity (WIFI_MOD_CLASS_OFDM, CreateObject<OfdmPhy> ());
 
   // See Table 17-21 "OFDM PHY characteristics" of 802.11-2016
   SetSifs (MicroSeconds (16));
@@ -740,7 +741,7 @@ void
 WifiPhy::Configure80211b (void)
 {
   NS_LOG_FUNCTION (this);
-  Ptr<DsssPhy> phyEntity = Create<DsssPhy> ();
+  Ptr<DsssPhy> phyEntity = CreateObject<DsssPhy> ();
   AddPhyEntity (WIFI_MOD_CLASS_HR_DSSS, phyEntity);
   AddPhyEntity (WIFI_MOD_CLASS_DSSS, phyEntity); //when plain DSSS modes are used
 
@@ -763,7 +764,7 @@ WifiPhy::Configure80211g (void)
   // if the user sets the ShortSlotTimeSupported flag to true and when the BSS
   // consists of only ERP STAs capable of supporting this option.
   Configure80211b ();
-  AddPhyEntity (WIFI_MOD_CLASS_ERP_OFDM, Create<ErpOfdmPhy> ());
+  AddPhyEntity (WIFI_MOD_CLASS_ERP_OFDM, CreateObject<ErpOfdmPhy> ());
 }
 
 void
@@ -772,7 +773,7 @@ WifiPhy::Configure80211p (void)
   NS_LOG_FUNCTION (this);
   if (GetChannelWidth () == 10)
     {
-      AddPhyEntity (WIFI_MOD_CLASS_OFDM, Create<OfdmPhy> (OFDM_PHY_10_MHZ));
+      AddPhyEntity (WIFI_MOD_CLASS_OFDM, CreateObject<OfdmPhy> (OFDM_PHY_10_MHZ));
 
       // See Table 17-21 "OFDM PHY characteristics" of 802.11-2016
       SetSifs (MicroSeconds (32));
@@ -782,7 +783,7 @@ WifiPhy::Configure80211p (void)
     }
   else if (GetChannelWidth () == 5)
     {
-      AddPhyEntity (WIFI_MOD_CLASS_OFDM, Create<OfdmPhy> (OFDM_PHY_5_MHZ));
+      AddPhyEntity (WIFI_MOD_CLASS_OFDM, CreateObject<OfdmPhy> (OFDM_PHY_5_MHZ));
 
       // See Table 17-21 "OFDM PHY characteristics" of 802.11-2016
       SetSifs (MicroSeconds (64));
@@ -808,7 +809,7 @@ WifiPhy::Configure80211n (void)
     {
       Configure80211a ();
     }
-  AddPhyEntity (WIFI_MOD_CLASS_HT, Create<HtPhy> (m_txSpatialStreams));
+  AddPhyEntity (WIFI_MOD_CLASS_HT, CreateObject<HtPhy> (m_txSpatialStreams));
 
   // See Table 10-5 "Determination of the EstimatedAckTxTime based on properties
   // of the PPDU causing the EIFS" of 802.11-2016
@@ -820,7 +821,7 @@ WifiPhy::Configure80211ac (void)
 {
   NS_LOG_FUNCTION (this);
   Configure80211n ();
-  AddPhyEntity (WIFI_MOD_CLASS_VHT, Create<VhtPhy> ());
+  AddPhyEntity (WIFI_MOD_CLASS_VHT, CreateObject<VhtPhy> ());
 }
 
 void
@@ -835,7 +836,7 @@ WifiPhy::Configure80211ax (void)
     {
       Configure80211ac ();
     }
-  AddPhyEntity (WIFI_MOD_CLASS_HE, Create<HePhy> ());
+  AddPhyEntity (WIFI_MOD_CLASS_HE, CreateObject<HePhy> ());
 }
 
 void
