@@ -542,6 +542,162 @@ LogDistancePropagationLossModel::DoAssignStreams (int64_t stream)
 
 // ------------------------------------------------------------------------- //
 
+NS_OBJECT_ENSURE_REGISTERED (IeeeIndoorPropagationLossModel);
+
+TypeId
+IeeeIndoorPropagationLossModel::GetTypeId (void)
+{
+  static TypeId tid = TypeId ("ns3::IeeeIndoorPropagationLossModel")
+    .SetParent<PropagationLossModel> ()
+    .SetGroupName ("Propagation")
+    .AddConstructor<IeeeIndoorPropagationLossModel> ()
+    .AddAttribute ("Exponent1",
+                   "The exponent of the Path Loss propagation model before breakpoint distance",
+                   DoubleValue (2.0),
+                   MakeDoubleAccessor (&IeeeIndoorPropagationLossModel::m_exponent1),
+                   MakeDoubleChecker<double> ())
+    .AddAttribute ("Exponent2",
+                   "The exponent of the Path Loss propagation model after breakpoint distance",
+                   DoubleValue (3.5),
+                   MakeDoubleAccessor (&IeeeIndoorPropagationLossModel::m_exponent2),
+                   MakeDoubleChecker<double> ())
+    .AddAttribute ("BreakpointDistance",
+                   "The distance at which the exponent changes",
+                   DoubleValue (10.0),
+                   MakeDoubleAccessor (&IeeeIndoorPropagationLossModel::m_breakpointDistance),
+                   MakeDoubleChecker<double> ())
+    .AddAttribute ("Frequency",
+                   "Carrier frequency, Hz (default 15.5 GHz)",
+                   DoubleValue (5.150e9),
+                   MakeDoubleAccessor (&IeeeIndoorPropagationLossModel::m_frequency),
+                   MakeDoubleChecker<double> ())
+    .AddAttribute ("EnableShadowing",
+                   "If true - enable shadowing component which is Gaussian with zero mean in dB domain",
+                   BooleanValue (false),
+                   MakeBooleanAccessor (&IeeeIndoorPropagationLossModel::m_enableShadowing),
+                   MakeBooleanChecker ())
+    .AddAttribute ("ShadowingStdDev1",
+                   "The standard deviation of shadowing distribution before breakpoint distance",
+                   DoubleValue (3.0),
+                   MakeDoubleAccessor (&IeeeIndoorPropagationLossModel::m_stdDev1),
+                   MakeDoubleChecker<double> ())
+    .AddAttribute ("ShadowingStdDev2",
+                   "The standard deviation of shadowing distribution after breakpoint distance",
+                   DoubleValue (5.0),
+                   MakeDoubleAccessor (&IeeeIndoorPropagationLossModel::m_stdDev2),
+                   MakeDoubleChecker<double> ())
+  ;
+  return tid;
+
+}
+
+IeeeIndoorPropagationLossModel::IeeeIndoorPropagationLossModel ()
+{
+  m_shadowingVar = CreateObject <NormalRandomVariable> ();
+}
+
+void
+IeeeIndoorPropagationLossModel::SetPathLossExponents (double e1, double e2)
+{
+  m_exponent1 = e1;
+  m_exponent2 = e2;
+}
+
+double
+IeeeIndoorPropagationLossModel::GetPathLossExponent1 (void) const
+{
+  return m_exponent1;
+}
+
+double
+IeeeIndoorPropagationLossModel::GetPathLossExponent2 (void) const
+{
+  return m_exponent2;
+}
+
+void
+IeeeIndoorPropagationLossModel::SetBreakpointDistance (double distance)
+{
+  m_breakpointDistance = distance;
+}
+
+double
+IeeeIndoorPropagationLossModel::GetBreakpointDistance (void) const
+{
+  return m_breakpointDistance;
+}
+
+void
+IeeeIndoorPropagationLossModel::SetFrequency (double distance)
+{
+  m_frequency = distance;
+}
+
+double
+IeeeIndoorPropagationLossModel::GetFrequency (void) const
+{
+  return m_frequency;
+}
+
+void
+IeeeIndoorPropagationLossModel::EnableShadowing (double std1, double std2)
+{
+  m_enableShadowing = true;
+  m_stdDev1 = std1;
+  m_stdDev2 = std2;
+}
+
+double
+IeeeIndoorPropagationLossModel::GetShadowingStdDev1 (void) const
+{
+  return m_stdDev1;
+}
+
+double
+IeeeIndoorPropagationLossModel::GetShadowingStdDev2 (void) const
+{
+  return m_stdDev2;
+}
+
+double
+IeeeIndoorPropagationLossModel::DoCalcRxPower (double txPowerDbm,
+                                                Ptr<MobilityModel> a,
+                                                Ptr<MobilityModel> b) const
+{
+  double distance = a->GetDistanceFrom (b);
+  /**
+   * The formula is:
+   *      /
+   *      | 10 * exp1 * log (d) + 10 * exp1 * log (f) - 147.5 + Shadowing (stdDev1), if d <= d0;
+   * rx = |
+   *      | [10 * exp1 * log (d0) + 10 * exp1 * log (f) - 147.5] + 10 * exp2 * log (d / d0) + Shadowing (stdDev1); if d < d0
+   *      \
+   * Pr0: rx power at reference distance d0 (W)
+   * d0: reference distance: 1.0 (m)
+   * d: distance (m)
+   * tx: tx power (dB)
+   * rx: dB
+   *
+   */
+  double pathLossDb = (10 * m_exponent1 * std::log10 (m_frequency) +
+                      10 * m_exponent1 * std::log10 (std::min (distance, m_breakpointDistance)) - 147.5) +
+                      ((distance > m_breakpointDistance) ? 10 * m_exponent2 * std::log10 (distance / m_breakpointDistance) : 0);
+  if (m_enableShadowing)
+    {
+      pathLossDb += (distance <= m_breakpointDistance) ? m_shadowingVar->GetValue (0, m_stdDev1 * m_stdDev1)
+        : m_shadowingVar->GetValue (0, m_stdDev2 * m_stdDev2);
+    }
+  return txPowerDbm - pathLossDb;
+}
+
+int64_t
+IeeeIndoorPropagationLossModel::DoAssignStreams (int64_t stream)
+{
+  return 0;
+}
+
+// ------------------------------------------------------------------------- //
+
 NS_OBJECT_ENSURE_REGISTERED (ThreeLogDistancePropagationLossModel);
 
 TypeId

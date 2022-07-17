@@ -509,6 +509,102 @@ private:
 /**
  * \ingroup propagation
  *
+ * \brief an IEEE indoor propagation model.
+ *
+ * This model calculates the reception power according to TGn Channel Models document
+ *
+ */
+class IeeeIndoorPropagationLossModel : public PropagationLossModel
+{
+public:
+  /**
+   * \brief Get the type ID.
+   * \return the object TypeId
+   */
+  static TypeId GetTypeId (void);
+  IeeeIndoorPropagationLossModel ();
+
+  // Delete copy constructor and assignment operator to avoid misuse
+  IeeeIndoorPropagationLossModel (const IeeeIndoorPropagationLossModel &) = delete;
+  IeeeIndoorPropagationLossModel & operator = (const IeeeIndoorPropagationLossModel &) = delete;
+
+  /**
+   * \param e1 the path loss exponent before breakpoint distance.
+   * \param e2 the path loss exponent after breakpoint distance.
+   * Set the path loss exponents.
+   */
+  void SetPathLossExponents (double e1, double e2);
+  /**
+   * \returns the path loss exponent before breakpoint distance.
+   */
+  double GetPathLossExponent1 (void) const;
+  /**
+   * \returns the path loss exponent after breakpoint distance.
+   */
+  double GetPathLossExponent2 (void) const;
+
+  /**
+   * Set the breakpoint distance
+   * \param distance breakpoint distance
+   */
+  void SetBreakpointDistance (double distance);
+  /**
+   * \returns breakpoint distance
+   */
+  double GetBreakpointDistance (void) const;
+
+  /**
+   * Set the carrier frequency
+   * \param f carrier frequency
+   */
+  void SetFrequency (double f);
+  /**
+   * \returns carrier frequency
+   */
+  double GetFrequency (void) const;
+
+  /**
+   * Enable shadowing and set standard deviations for shadowing distributions
+   * \param std1 standard deviation of shadowing distribution before breakpoint distance
+   * \param std2 standard deviation of shadowing distribution after breakpoint distance
+   */
+  void EnableShadowing (double std1, double std2);
+  /**
+   * \returns standard deviation of shadowing distribution before breakpoint distance
+   */
+  double GetShadowingStdDev1 (void) const;
+  /**
+   * \returns standard deviation of shadowing distribution after breakpoint distance
+   */
+  double GetShadowingStdDev2 (void) const;
+
+private:
+  double DoCalcRxPower (double txPowerDbm,
+                        Ptr<MobilityModel> a,
+                        Ptr<MobilityModel> b) const override;
+
+  int64_t DoAssignStreams (int64_t stream) override;
+
+  /**
+   *  Creates a default reference loss model
+   * \return a default reference loss model
+   */
+  static Ptr<PropagationLossModel> CreateDefaultReference (void);
+
+  double m_exponent1; //!< the path loss exponent before breakpoint distance
+  double m_exponent2; //!< the path loss exponent after breakpoint distance
+  double m_breakpointDistance; //!< breakpoint distance
+  double m_frequency; //!< carrier frequency
+  double m_enableShadowing; //!< enable/disable Gaussian shadowing
+  double m_stdDev1; //!< standard deviation of shadowing distribution before breakpoint distance
+  double m_stdDev2; //!< standard deviation of shadowing distribution after breakpoint distance
+
+  Ptr<NormalRandomVariable> m_shadowingVar; //!< random variable for shadowing
+};
+
+/**
+ * \ingroup propagation
+ *
  * \brief A log distance path loss propagation model with three distance
  * fields. This model is the same as ns3::LogDistancePropagationLossModel
  * except that it has three distance fields: near, middle and far with
