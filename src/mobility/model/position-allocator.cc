@@ -539,6 +539,11 @@ UniformDiscPositionAllocator::GetTypeId (void)
                    DoubleValue (0.0),
                    MakeDoubleAccessor (&UniformDiscPositionAllocator::m_rho),
                    MakeDoubleChecker<double> ())
+    .AddAttribute ("minDist",
+                   "Minimum distance between nodes in disc and its center",
+                   DoubleValue (0.0),
+                   MakeDoubleAccessor (&UniformDiscPositionAllocator::m_minDist),
+                   MakeDoubleChecker<double> ())
     .AddAttribute ("X",
                    "The x coordinate of the center of the  disc.",
                    DoubleValue (0.0),
@@ -573,6 +578,12 @@ UniformDiscPositionAllocator::SetRho (double rho)
 }
 
 void
+UniformDiscPositionAllocator::SetMinDist (double minDist)
+{
+  m_minDist = minDist;
+}
+
+void
 UniformDiscPositionAllocator::SetX (double x)
 {
   m_x = x;
@@ -599,7 +610,7 @@ UniformDiscPositionAllocator::GetNext (void) const
       x = m_rv->GetValue (-m_rho, m_rho);
       y = m_rv->GetValue (-m_rho, m_rho);
     }
-  while (std::sqrt (x * x + y * y) > m_rho);
+  while (std::sqrt (x * x + y * y) > m_rho || std::sqrt (x * x + y * y) < m_minDist);
 
   x += m_x;
   y += m_y;

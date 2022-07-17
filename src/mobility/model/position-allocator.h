@@ -394,6 +394,11 @@ public:
   void SetRho (double rho);
 
   /**
+   * \param minDist the value of the minimum distance from the center of the disc
+   */
+  void SetMinDist (double minDist);
+
+  /**
    * \param x  the X coordinate of the center of the disc
    */
   void SetX (double x);
@@ -414,6 +419,7 @@ public:
 private:
   Ptr<UniformRandomVariable> m_rv;  //!< pointer to uniform random variable
   double m_rho; //!< value of the radius of the disc
+  double m_minDist; //!< minimum distance from the center of the disc
   double m_x;  //!< x coordinate of center of disc
   double m_y;  //!< y coordinate of center of disc
   double m_z;  //!< z coordinate of the disc
