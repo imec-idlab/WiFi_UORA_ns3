@@ -45,6 +45,11 @@
 #include "ns3/wifi-acknowledgment.h"
 #include "ns3/rng-seed-manager.h"
 #include "ns3/progress-bar.h"
+#include "ns3/mac48-address.h"
+
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 // Packets in this simulation belong to BestEffort Access Class (AC_BE).
 // By selecting an acknowledgment sequence for DL MU PPDUs, it is possible to aggregate a
@@ -52,20 +57,24 @@
 
 using namespace ns3;
 
-void SinrTrace (double sinr, uint16_t staId) 
+struct stats_t
 {
-  std::cout << "SINR = " << sinr << " dB, STA ID = " << staId << std::endl;
-}
+  double sinr;
+  uint64_t totalBeacons;
+};
+std::map<Mac48Address, stats_t> g_statsMap; //!< map for statistics for each station
 
-void DummyTrace (Ptr<const Packet> p) 
+void SinrTrace (Mac48Address addr, double sinr)
 {
-  std::cout << "Dummy" << std::endl;
+  g_statsMap[addr].sinr += sinr;
+  g_statsMap[addr].totalBeacons++;
 }
-
 
 int main (int argc, char *argv[])
 {
+  //LogComponentEnable ("ApWifiMac", LOG_LEVEL_ALL);
   double simulationTime {10}; //seconds
+  std::string logDir {"output"};
   double minDistance {1.0}; //meters
   double maxDistance {5.0}; //meters
   std::size_t nStations {1};
@@ -95,6 +104,7 @@ int main (int argc, char *argv[])
   CommandLine cmd (__FILE__);
   //Experiment set-up
   cmd.AddValue ("simulationTime", "Simulation time in seconds", simulationTime);
+  cmd.AddValue ("logDir", "Directory for the output stats files", logDir);
   cmd.AddValue ("minDistance", "Minimum distance in meters between the station and the access point", minDistance);
   cmd.AddValue ("maxDistance", "Maximum distance in meters between the station and the access point", maxDistance);
   cmd.AddValue ("nStations", "Number of non-AP HE stations", nStations);
@@ -125,6 +135,14 @@ int main (int argc, char *argv[])
   cmd.AddValue ("interval", "Average inter-packet interval [s]", interval);
   
   cmd.Parse (argc, argv);
+
+  /* Change dir. */
+  mkdir (logDir.c_str (), 0777);
+  if (chdir (logDir.c_str ()) == -1)
+    {
+      perror ("chdir");
+      NS_FATAL_ERROR ("chdir: " << strerror (errno));
+    }
 
   if (useRts)
     {
@@ -367,14 +385,13 @@ int main (int argc, char *argv[])
   Simulator::Schedule (Seconds (0), &Ipv4GlobalRoutingHelper::PopulateRoutingTables);
 
   //Connect traces
-  std::cout << "AP phy = " << apDevice.Get (0)->GetObject <WifiNetDevice> ()->GetPhy () << " STA PHY = " << staDevices.Get (0)->GetObject <WifiNetDevice> ()->GetPhy () 
-    << " AP OFDM entity = " << apDevice.Get (0)->GetObject <WifiNetDevice> ()->GetPhy ()->GetPhyEntity (WIFI_MOD_CLASS_OFDM) 
-    << " STA OFDM entity = " << staDevices.Get (0)->GetObject <WifiNetDevice> ()->GetPhy ()->GetPhyEntity (WIFI_MOD_CLASS_OFDM) << std::endl;
-  //apDevice.Get (0)->GetObject <WifiNetDevice> ()->GetPhy ()->TraceConnectWithoutContext ("PhyRxEndBlaBla", MakeCallback (&DummyTrace));
-  apDevice.Get (0)->GetObject <WifiNetDevice> ()->GetPhy ()->GetPhyEntity (WIFI_MOD_CLASS_OFDM)->TraceConnectWithoutContext ("SinrTrace", MakeCallback (&SinrTrace));
-  staDevices.Get (0)->GetObject <WifiNetDevice> ()->GetPhy ()->GetPhyEntity (WIFI_MOD_CLASS_OFDM)->TraceConnectWithoutContext ("SinrTrace", MakeCallback (&SinrTrace));
-  apDevice.Get (0)->GetObject <WifiNetDevice> ()->GetPhy ()->GetPhyEntity (WIFI_MOD_CLASS_HE)->TraceConnectWithoutContext ("SinrTrace", MakeCallback (&SinrTrace));
-  staDevices.Get (0)->GetObject <WifiNetDevice> ()->GetPhy ()->GetPhyEntity (WIFI_MOD_CLASS_HE)->TraceConnectWithoutContext ("SinrTrace", MakeCallback (&SinrTrace));
+  for (uint32_t i = 0; i < staDevices.GetN (); i++)
+    {
+      staDevices.Get (i)->GetObject <WifiNetDevice> ()->GetPhy ()->GetPhyEntity (WIFI_MOD_CLASS_OFDM)
+        ->TraceConnectWithoutContext ("SinrTrace", MakeBoundCallback (&SinrTrace, Mac48Address::ConvertFrom (staDevices.Get (i)->GetAddress ())));
+      staDevices.Get (i)->GetObject <WifiNetDevice> ()->GetPhy ()->GetPhyEntity (WIFI_MOD_CLASS_HE)
+        ->TraceConnectWithoutContext ("SinrTrace", MakeBoundCallback (&SinrTrace, Mac48Address::ConvertFrom (staDevices.Get (i)->GetAddress ())));
+    }
 
   ProgressBar pg (Seconds(simulationTime + 1));
   Simulator::Stop (Seconds (simulationTime + 1));
@@ -398,9 +415,23 @@ int main (int argc, char *argv[])
     }
   double throughput = (rxBytes * 8) / (simulationTime * 1000000.0); //Mbit/s
 
-  Simulator::Destroy ();
+  std::ofstream totalStatsOutStream;
+  totalStatsOutStream.open ("throughput.out", std::ios::out);
+  totalStatsOutStream << "MCS\tBandwidth, MHz\tGuard interval, ns\tThroughput, Mbps" << std::endl;
+  totalStatsOutStream << mcs << "\t" << channelWidth << "\t" << guardInterval << "\t" << throughput << std::endl;
+  totalStatsOutStream.close ();
 
-  std::cout << mcs << "\t" << channelWidth << " MHz\t" << guardInterval << " ns\t" << throughput << " Mbit/s" << std::endl;
+  std::ofstream perStaOutStream;
+  perStaOutStream.open ("per_sta_stats.out", std::ios::out);
+  perStaOutStream << "MAC addr\tSINR, dB" << std::endl;
+  for (auto &staStats : g_statsMap)
+    {
+      staStats.second.sinr /= staStats.second.totalBeacons;
+      perStaOutStream << staStats.first << "\t" << staStats.second.sinr << std::endl;
+    }
+  perStaOutStream.close ();
+
+  Simulator::Destroy ();
 
   return 0;
 }

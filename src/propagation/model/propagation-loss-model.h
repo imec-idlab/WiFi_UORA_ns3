@@ -595,7 +595,7 @@ private:
   double m_exponent2; //!< the path loss exponent after breakpoint distance
   double m_breakpointDistance; //!< breakpoint distance
   double m_frequency; //!< carrier frequency
-  double m_enableShadowing; //!< enable/disable Gaussian shadowing
+  bool m_enableShadowing; //!< enable/disable Gaussian shadowing
   double m_stdDev1; //!< standard deviation of shadowing distribution before breakpoint distance
   double m_stdDev2; //!< standard deviation of shadowing distribution after breakpoint distance
 

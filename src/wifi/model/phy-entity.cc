@@ -81,7 +81,7 @@ PhyEntity::GetTypeId (void)
     .SetParent<Object> ()
     .SetGroupName ("Wifi")
     .AddTraceSource ("SinrTrace",
-                     "Trace SINR value for payload receiption",
+                     "Trace SINR value for beacon receiption",
                      MakeTraceSourceAccessor (&PhyEntity::m_sinrTrace),
                      "ns3::PhyEntity::SinrTrace")
     ;
@@ -730,7 +730,10 @@ PhyEntity::GetReceptionStatus (Ptr<const WifiPsdu> psdu, Ptr<Event> event, uint1
   SnrPer snrPer = m_wifiPhy->m_interference->CalculatePayloadSnrPer (event, channelWidthAndBand.first, channelWidthAndBand.second, staId,
                                                                     std::make_pair (relativeMpduStart, relativeMpduStart + mpduDuration));
 
-  m_sinrTrace (RatioToDb(snrPer.snr), staId);
+  if (psdu->GetHeader (0).IsBeacon ())
+    {
+      m_sinrTrace (RatioToDb(snrPer.snr));
+    }
 
   WifiMode mode = event->GetTxVector ().GetMode (staId);
 

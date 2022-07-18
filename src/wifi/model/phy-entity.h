@@ -34,6 +34,7 @@
 #include "ns3/nstime.h"
 #include "ns3/wifi-spectrum-value-helper.h"
 #include "ns3/traced-callback.h"
+#include "ns3/mac48-address.h"
 #include <list>
 #include <map>
 #include <tuple>
@@ -845,7 +846,7 @@ protected:
 
   static uint64_t m_globalPpduUid; //!< Global counter of the PPDU UID
 
-  TracedCallback<double, uint16_t> m_sinrTrace;
+  TracedCallback<double> m_sinrTrace;
 }; //class PhyEntity
 
 /**
