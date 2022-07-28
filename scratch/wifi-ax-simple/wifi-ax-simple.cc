@@ -112,7 +112,7 @@ int main (int argc, char *argv[])
   bool enableUlOfdma {false};
   bool enableBsrp {false};
   Time accessReqInterval {0};
-  bool useRts {false};
+  bool useRts {true};
   bool useExtendedBlockAck {false};
 
   uint32_t payloadSize = 700; // must fit in the max TX duration when transmitting at MCS 0 over an RU of 26 tones
