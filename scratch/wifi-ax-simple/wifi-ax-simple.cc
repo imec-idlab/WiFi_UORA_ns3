@@ -114,6 +114,7 @@ int main (int argc, char *argv[])
   Time accessReqInterval {0};
   bool useRts {true};
   bool useExtendedBlockAck {false};
+  bool useHuaweiEdcaParams {true};
 
   uint32_t payloadSize = 700; // must fit in the max TX duration when transmitting at MCS 0 over an RU of 26 tones
   bool udp {true};
@@ -147,6 +148,7 @@ int main (int argc, char *argv[])
   cmd.AddValue ("enableUlOfdma", "Enable UL OFDMA (useful if DL OFDMA is enabled and TCP is used)", enableUlOfdma);
   cmd.AddValue ("enableBsrp", "Enable BSRP (useful if DL and UL OFDMA are enabled and TCP is used)", enableBsrp);
   cmd.AddValue ("muSchedAccessReqInterval", "Duration of the interval between two requests for channel access made by the MU scheduler", accessReqInterval);
+  cmd.AddValue ("useHuaweiEdcaParams", "Enable/disable Huawei EDCA parameters set", useHuaweiEdcaParams);
 
   //Traffic params
   cmd.AddValue ("payloadSize", "The application payload size in bytes", payloadSize);
@@ -228,6 +230,31 @@ int main (int argc, char *argv[])
   wifiApNode.Get (0)->AggregateObject (apMobility);
 
   // WI-FI PHY & MAC
+  if (useHuaweiEdcaParams)
+    {
+      //STA AIFSN
+      Config::SetDefault ("ns3::HeConfiguration::MuBkAifsn", UintegerValue (7));
+      Config::SetDefault ("ns3::HeConfiguration::MuBeAifsn", UintegerValue (3));
+      Config::SetDefault ("ns3::HeConfiguration::MuViAifsn", UintegerValue (2));
+      Config::SetDefault ("ns3::HeConfiguration::MuVoAifsn", UintegerValue (2));
+
+      //STA CW min
+      Config::SetDefault ("ns3::HeConfiguration::MuBkCwMin", UintegerValue (15));
+      Config::SetDefault ("ns3::HeConfiguration::MuBeCwMin", UintegerValue (15));
+      Config::SetDefault ("ns3::HeConfiguration::MuViCwMin", UintegerValue (7));
+      Config::SetDefault ("ns3::HeConfiguration::MuVoCwMin", UintegerValue (3));
+
+      //STA CW max
+      Config::SetDefault ("ns3::HeConfiguration::MuBkCwMax", UintegerValue (1023));
+      Config::SetDefault ("ns3::HeConfiguration::MuBeCwMax", UintegerValue (1023));
+      Config::SetDefault ("ns3::HeConfiguration::MuViCwMax", UintegerValue (15));
+      Config::SetDefault ("ns3::HeConfiguration::MuVoCwMax", UintegerValue (7));
+
+      //Retry limit
+      Config::SetDefault ("ns3::WifiRemoteStationManager::MaxSsrc", UintegerValue (32));
+      Config::SetDefault ("ns3::WifiRemoteStationManager::MaxSlrc", UintegerValue (32));
+    }
+
   NetDeviceContainer apDevice, staDevices;
   WifiMacHelper mac;
   WifiHelper wifi;
@@ -321,6 +348,23 @@ int main (int argc, char *argv[])
                   "EnableBeaconJitter", BooleanValue (false),
                   "Ssid", SsidValue (ssid));
       apDevice = wifi.Install (phy, mac, wifiApNode);
+    }
+
+  //overwrite slot, sifs, ack and rts/cts duration
+  if (useHuaweiEdcaParams)
+    {
+      for (uint32_t i = 0; i < staDevices.GetN (); i++)
+        {
+          staDevices.Get (i)->GetObject <WifiNetDevice> ()->GetPhy ()->SetAttribute ("Slot", TimeValue (MicroSeconds (9)));
+          staDevices.Get (i)->GetObject <WifiNetDevice> ()->GetPhy ()->SetAttribute ("Sifs", TimeValue (MicroSeconds (16)));
+          staDevices.Get (i)->GetObject <WifiNetDevice> ()->GetPhy ()->SetAttribute ("AckTxTime", TimeValue (MicroSeconds (32)));
+          //TODO: set RTS/CTS duration
+        }
+
+      apDevice.Get (0)->GetObject <WifiNetDevice> ()->GetPhy ()->SetAttribute ("Slot", TimeValue (MicroSeconds (9)));
+      apDevice.Get (0)->GetObject <WifiNetDevice> ()->GetPhy ()->SetAttribute ("Sifs", TimeValue (MicroSeconds (16)));
+      apDevice.Get (0)->GetObject <WifiNetDevice> ()->GetPhy ()->SetAttribute ("AckTxTime", TimeValue (MicroSeconds (32)));
+      //TODO: set RTS/CTS duration
     }
 
   /* Internet stack*/

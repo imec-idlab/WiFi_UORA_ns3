@@ -250,6 +250,14 @@ WifiPhy::GetTypeId (void)
                    TimeValue (MicroSeconds (0)),
                    MakeTimeAccessor (&WifiPhy::m_pifs),
                    MakeTimeChecker ())
+    .AddAttribute ("AckTxTime",
+                   "The duration of ACK TX time."
+                   "NOTE that the default value is overwritten by the value defined "
+                   "by the standard; if you want to set this attribute, you have to "
+                   "do it after that the PHY object is initialized.",
+                   TimeValue (MicroSeconds (0)),
+                   MakeTimeAccessor (&WifiPhy::m_ackTxTime),
+                   MakeTimeChecker ())
     .AddAttribute ("PowerDensityLimit",
                    "The mean equivalent isotropically radiated power density"
                    "limit (in dBm/MHz) set by regulators.",
