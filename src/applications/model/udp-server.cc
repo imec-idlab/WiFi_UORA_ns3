@@ -59,6 +59,11 @@ UdpServer::GetTypeId (void)
                    MakeUintegerAccessor (&UdpServer::GetPacketWindowSize,
                                          &UdpServer::SetPacketWindowSize),
                    MakeUintegerChecker<uint16_t> (8,256))
+    .AddAttribute ("Tos",
+                   "Value of type of service",
+                   UintegerValue (0),
+                   MakeUintegerAccessor (&UdpServer::m_tos),
+                   MakeUintegerChecker<uint8_t> ())
     .AddTraceSource ("Rx", "A packet has been received",
                      MakeTraceSourceAccessor (&UdpServer::m_rxTrace),
                      "ns3::Packet::TracedCallback")
@@ -127,6 +132,7 @@ UdpServer::StartApplication (void)
       m_socket = Socket::CreateSocket (GetNode (), tid);
       InetSocketAddress local = InetSocketAddress (Ipv4Address::GetAny (),
                                                    m_port);
+      local.SetTos (m_tos);
       if (m_socket->Bind (local) == -1)
         {
           NS_FATAL_ERROR ("Failed to bind socket");

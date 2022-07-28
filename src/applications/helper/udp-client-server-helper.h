@@ -53,6 +53,16 @@ public:
   UdpServerHelper (uint16_t port);
 
   /**
+   * Create UdpServerHelper which will make life easier for people trying
+   * to set up simulations with udp-client-server application.
+   *
+   * \param port The port the server will wait on for incoming packets
+   * \param tos The type of service value
+   */
+  UdpServerHelper (uint16_t port, uint8_t tos);
+
+
+  /**
    * Record an attribute to be set in each Application after it is is created.
    *
    * \param name the name of the attribute to set

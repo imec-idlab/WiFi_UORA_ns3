@@ -51,10 +51,6 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-// Packets in this simulation belong to BestEffort Access Class (AC_BE).
-// By selecting an acknowledgment sequence for DL MU PPDUs, it is possible to aggregate a
-// Round Robin scheduler to the AP, so that DL MU PPDUs are sent by the AP via DL OFDMA.
-
 using namespace ns3;
 
 struct stats_t
@@ -68,6 +64,30 @@ void SinrTrace (Mac48Address addr, double sinr)
 {
   g_statsMap[addr].sinr += sinr;
   g_statsMap[addr].totalBeacons++;
+}
+
+uint8_t GetTosFromAccessCategory (std::string ac)
+{
+  if (ac == "AC_BE")
+    {
+      return 0x70;
+    }
+  else if (ac == "AC_BK")
+    {
+      return 0x28;
+    }
+  else if (ac == "AC_VI")
+    {
+      return 0xb8;
+    }
+  else if (ac == "AC_VO")
+    {
+      return 0xc0;
+    }
+  else
+    {
+      NS_FATAL_ERROR ("Wrong access category");
+    }
 }
 
 int main (int argc, char *argv[])
@@ -100,6 +120,7 @@ int main (int argc, char *argv[])
   bool downlink {true};
   std::string trafficType {"Poisson"};
   double interval {0.00001}; //seconds
+  std::string accessCategory {"AC_BE"};
 
   CommandLine cmd (__FILE__);
   //Experiment set-up
@@ -133,6 +154,7 @@ int main (int argc, char *argv[])
   cmd.AddValue ("downlink", "Generate downlink flows if set to 1, uplink flows otherwise", downlink);
   cmd.AddValue ("trafficType", "Poisson / CBR", trafficType);
   cmd.AddValue ("interval", "Average inter-packet interval [s]", interval);
+  cmd.AddValue ("accessCategory", "Access category for traffic: AC_BE, AC_BK, AC_VO, AC_VI", accessCategory);
   
   cmd.Parse (argc, argv);
 
@@ -329,14 +351,16 @@ int main (int argc, char *argv[])
     {
       //UDP flow
       uint16_t port = 9;
-      UdpServerHelper server (port);
+      UdpServerHelper server (port, GetTosFromAccessCategory (accessCategory));
       serverApp = server.Install (serverNodes.get ());
       serverApp.Start (Seconds (0.0));
       serverApp.Stop (Seconds (simulationTime + 1));
 
       for (std::size_t i = 0; i < nStations; i++)
         {
-          UdpClientHelper client (serverInterfaces.GetAddress (i), port);
+          InetSocketAddress remoteAddress = InetSocketAddress (serverInterfaces.GetAddress (i), port);
+          remoteAddress.SetTos (GetTosFromAccessCategory (accessCategory));
+          UdpClientHelper client (remoteAddress);
           client.SetAttribute ("MaxPackets", UintegerValue (4294967295u));
           if (trafficType == "CBR") //CBR traffic
             {
@@ -361,7 +385,9 @@ int main (int argc, char *argv[])
     {
       //TCP flow
       uint16_t port = 50000;
-      Address localAddress (InetSocketAddress (Ipv4Address::GetAny (), port));
+
+      InetSocketAddress localAddress = InetSocketAddress (Ipv4Address::GetAny (), port);
+      localAddress.SetTos (GetTosFromAccessCategory (accessCategory));
       PacketSinkHelper packetSinkHelper ("ns3::TcpSocketFactory", localAddress);
       serverApp = packetSinkHelper.Install (serverNodes.get ());
       serverApp.Start (Seconds (0.0));
@@ -374,8 +400,9 @@ int main (int argc, char *argv[])
           onoff.SetAttribute ("OffTime", StringValue ("ns3::ConstantRandomVariable[Constant=0]"));
           onoff.SetAttribute ("PacketSize", UintegerValue (payloadSize));
           onoff.SetAttribute ("DataRate", DataRateValue (1000000000)); //bit/s
-          AddressValue remoteAddress (InetSocketAddress (serverInterfaces.GetAddress (i), port));
-          onoff.SetAttribute ("Remote", remoteAddress);
+          InetSocketAddress remoteAddress = InetSocketAddress (serverInterfaces.GetAddress (i), port);
+          remoteAddress.SetTos (GetTosFromAccessCategory (accessCategory));
+          onoff.SetAttribute ("Remote", AddressValue(remoteAddress));
           ApplicationContainer clientApp = onoff.Install (clientNodes.Get (i));
           clientApp.Start (Seconds (1.0));
           clientApp.Stop (Seconds (simulationTime + 1));

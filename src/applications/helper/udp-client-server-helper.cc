@@ -37,6 +37,13 @@ UdpServerHelper::UdpServerHelper (uint16_t port)
   SetAttribute ("Port", UintegerValue (port));
 }
 
+UdpServerHelper::UdpServerHelper (uint16_t port, uint8_t tos)
+{
+  m_factory.SetTypeId (UdpServer::GetTypeId ());
+  SetAttribute ("Port", UintegerValue (port));
+  SetAttribute ("Tos", UintegerValue (tos));
+}
+
 void
 UdpServerHelper::SetAttribute (std::string name, const AttributeValue &value)
 {
