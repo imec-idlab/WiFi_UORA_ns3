@@ -57,13 +57,27 @@ struct stats_t
 {
   double sinr;
   uint64_t totalBeacons;
+  uint64_t rxBytes;
 };
 std::map<Mac48Address, stats_t> g_statsMap; //!< map for statistics for each station
+std::map<Ipv4Address, Mac48Address> g_Ip2Mac; //!< map for mapping IPv4 to MAC address
 
 void SinrTrace (Mac48Address addr, double sinr)
 {
   g_statsMap[addr].sinr += sinr;
   g_statsMap[addr].totalBeacons++;
+}
+
+void RxTrace (bool downlink, Ptr<const Packet> p, const Address &src, const Address &dst)
+{
+  if (downlink)
+    {
+      g_statsMap[g_Ip2Mac.at (InetSocketAddress::ConvertFrom (dst).GetIpv4 ())].rxBytes += p->GetSize ();
+    }
+  else
+    {
+      g_statsMap[g_Ip2Mac.at (InetSocketAddress::ConvertFrom (src).GetIpv4 ())].rxBytes += p->GetSize ();
+    }
 }
 
 uint8_t GetTosFromAccessCategory (std::string ac)
@@ -384,6 +398,20 @@ int main (int argc, char *argv[])
   staNodeInterfaces = address.Assign (staDevices);
   apNodeInterface = address.Assign (apDevice);
 
+  //Mapping between IPv4 and MAC
+  for (uint32_t i = 0; i < staDevices.GetN (); i++)
+    {
+      auto mac = Mac48Address::ConvertFrom (staDevices.Get (i)->GetAddress ());
+      auto ip = staNodeInterfaces.Get (i).first->GetAddress (1, 0).GetAddress ();
+      g_Ip2Mac[ip] = mac;
+    }
+  for (uint32_t i = 0; i < apDevice.GetN (); i++)
+    {
+      auto mac = Mac48Address::ConvertFrom (apDevice.Get (i)->GetAddress ());
+      auto ip = apNodeInterface.Get (i).first->GetAddress (1, 0).GetAddress ();
+      g_Ip2Mac[ip] = mac;
+    }
+
   /* Setting applications */
   ApplicationContainer serverApp;
   auto serverNodes = downlink ? std::ref (wifiStaNodes) : std::ref (wifiApNode);
@@ -399,8 +427,10 @@ int main (int argc, char *argv[])
     {
       //UDP flow
       uint16_t port = 9;
-      UdpServerHelper server (port, GetTosFromAccessCategory (accessCategory));
-      serverApp = server.Install (serverNodes.get ());
+      InetSocketAddress localAddress = InetSocketAddress (Ipv4Address::GetAny (), port);
+      localAddress.SetTos (GetTosFromAccessCategory (accessCategory));
+      PacketSinkHelper packetSinkHelper ("ns3::UdpSocketFactory", localAddress);
+      serverApp = packetSinkHelper.Install (serverNodes.get ());
       serverApp.Start (Seconds (0.0));
       serverApp.Stop (Seconds (simulationTime + 1));
 
@@ -468,26 +498,23 @@ int main (int argc, char *argv[])
         ->TraceConnectWithoutContext ("SinrTrace", MakeBoundCallback (&SinrTrace, Mac48Address::ConvertFrom (staDevices.Get (i)->GetAddress ())));
     }
 
+  for (uint32_t i = 0; i < serverApp.GetN (); i++)
+    {
+      DynamicCast<PacketSink> (serverApp.Get (i))->TraceConnectWithoutContext ("RxWithAddresses", MakeBoundCallback (&RxTrace, downlink));
+    }
+
   ProgressBar pg (Seconds(simulationTime + 1));
   Simulator::Stop (Seconds (simulationTime + 1));
   Simulator::Run ();
 
   // Statistics
   uint64_t rxBytes = 0;
-  if (udp)
+
+  for (uint32_t i = 0; i < serverApp.GetN (); i++)
     {
-      for (uint32_t i = 0; i < serverApp.GetN (); i++)
-        {
-          rxBytes += payloadSize * DynamicCast<UdpServer> (serverApp.Get (i))->GetReceived ();
-        }
+      rxBytes += DynamicCast<PacketSink> (serverApp.Get (i))->GetTotalRx ();
     }
-  else
-    {
-      for (uint32_t i = 0; i < serverApp.GetN (); i++)
-        {
-          rxBytes += DynamicCast<PacketSink> (serverApp.Get (i))->GetTotalRx ();
-        }
-    }
+
   double throughput = (rxBytes * 8) / (simulationTime * 1000000.0); //Mbit/s
 
   std::ofstream totalStatsOutStream;
@@ -498,11 +525,11 @@ int main (int argc, char *argv[])
 
   std::ofstream perStaOutStream;
   perStaOutStream.open ("per_sta_stats.out", std::ios::out);
-  perStaOutStream << "MAC addr\tSINR, dB" << std::endl;
+  perStaOutStream << "MAC addr\tSINR, dB\tRX bytes" << std::endl;
   for (auto &staStats : g_statsMap)
     {
       staStats.second.sinr /= staStats.second.totalBeacons;
-      perStaOutStream << staStats.first << "\t" << staStats.second.sinr << std::endl;
+      perStaOutStream << staStats.first << "\t" << staStats.second.sinr << "\t" << staStats.second.rxBytes << std::endl;
     }
   perStaOutStream.close ();
 
