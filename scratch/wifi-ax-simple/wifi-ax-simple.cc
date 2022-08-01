@@ -357,14 +357,18 @@ int main (int argc, char *argv[])
         {
           staDevices.Get (i)->GetObject <WifiNetDevice> ()->GetPhy ()->SetAttribute ("Slot", TimeValue (MicroSeconds (9)));
           staDevices.Get (i)->GetObject <WifiNetDevice> ()->GetPhy ()->SetAttribute ("Sifs", TimeValue (MicroSeconds (16)));
-          staDevices.Get (i)->GetObject <WifiNetDevice> ()->GetPhy ()->SetAttribute ("AckTxTime", TimeValue (MicroSeconds (32)));
+          //staDevices.Get (i)->GetObject <WifiNetDevice> ()->GetPhy ()->SetAttribute ("AckTxTime", TimeValue (MicroSeconds (32)));
           //TODO: set RTS/CTS duration
+          //Current values: Block ACK = 32 us, RTS = 57 us, CTS = 28 us
+          //!NB RTS is sent in HE mode with OFDM symbol (12.8 + GI) us, CTS is sent in legacy mode in 20 MHz with OFDM symbol (3.2 + GI) us
         }
 
       apDevice.Get (0)->GetObject <WifiNetDevice> ()->GetPhy ()->SetAttribute ("Slot", TimeValue (MicroSeconds (9)));
       apDevice.Get (0)->GetObject <WifiNetDevice> ()->GetPhy ()->SetAttribute ("Sifs", TimeValue (MicroSeconds (16)));
-      apDevice.Get (0)->GetObject <WifiNetDevice> ()->GetPhy ()->SetAttribute ("AckTxTime", TimeValue (MicroSeconds (32)));
+      //apDevice.Get (0)->GetObject <WifiNetDevice> ()->GetPhy ()->SetAttribute ("AckTxTime", TimeValue (MicroSeconds (32)));
       //TODO: set RTS/CTS duration
+      //Current values: Block ACK = 32 us, RTS = 57 us, CTS = 28 us
+      //!NB RTS is sent in HE mode with OFDM symbol (12.8 + GI) us, CTS is sent in legacy mode in 20 MHz with OFDM symbol (3.2 + GI) us
     }
 
   /* Internet stack*/
