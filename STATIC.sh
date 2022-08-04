@@ -4,7 +4,7 @@ export CXXFLAGS='-Wall -Werror -O3 -m64'
 if test $# -gt 0; then
     # If any arguments are given, distclean
     ./ns3 clean
-    ./ns3 configure -d debug --enable-static --disable-gtk --disable-tests --disable-examples 
+    ./ns3 configure -d release --enable-static --disable-gtk --disable-tests --disable-examples
 fi
 ./ns3 build
 
@@ -27,6 +27,7 @@ for DIR in scratch/*; do
 
     # Link static
     g++ -Wl,--dynamic-linker=/lib64/ld-linux-x86-64.so.2 -static -I${BUILDDIR}/include -o "$BIN" "$OBJ" -Wl,--whole-archive -L/usr/local/lib -L "$BUILDDIR/lib" \
-    -lns3-dev-static-debug -Wl,-Bdynamic -lpthread -ldl
+    -lns3-dev-static -lrt -pthread \
+    -Wl,--whole-archive -lpthread -Wl,--no-whole-archive -lgsl
 done
 
