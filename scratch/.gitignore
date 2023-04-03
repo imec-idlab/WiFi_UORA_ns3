@@ -4,3 +4,5 @@
 !subdir/
 !scratch-simulator.cc
 !CMakeLists.txt
+!wifi-ax-simple
+!wifi-ax-simple1

@@ -38,6 +38,7 @@
 #include "ctrl-headers.h"
 #include "wifi-mac-trailer.h"
 #include "wifi-tx-parameters.h"
+#include "ns3/core-module.h"
 
 NS_LOG_COMPONENT_DEFINE ("MpduAggregator");
 

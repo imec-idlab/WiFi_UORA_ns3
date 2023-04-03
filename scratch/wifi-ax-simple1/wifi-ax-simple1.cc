@@ -58,6 +58,7 @@ struct stats_t
   double sinr;
   uint64_t totalBeacons;
   uint64_t rxBytes;
+  std::vector<double> pktDelays; 
 };
 std::map<Mac48Address, stats_t> g_statsMap; //!< map for statistics for each station
 std::map<Ipv4Address, Mac48Address> g_Ip2Mac; //!< map for mapping IPv4 to MAC address
@@ -70,13 +71,18 @@ void SinrTrace (Mac48Address addr, double sinr)
 
 void RxTrace (bool downlink, Ptr<const Packet> p, const Address &src, const Address &dst)
 {
+  Ptr<Packet> pkt = p->Copy ();
+  SeqTsHeader seqTs;
+  pkt->RemoveHeader(seqTs);
   if (downlink)
     {
       g_statsMap[g_Ip2Mac.at (InetSocketAddress::ConvertFrom (dst).GetIpv4 ())].rxBytes += p->GetSize ();
+      g_statsMap[g_Ip2Mac.at (InetSocketAddress::ConvertFrom (dst).GetIpv4 ())].pktDelays.push_back ((Simulator::Now() - seqTs.GetTs ()).GetSeconds ());
     }
   else
     {
       g_statsMap[g_Ip2Mac.at (InetSocketAddress::ConvertFrom (src).GetIpv4 ())].rxBytes += p->GetSize ();
+      g_statsMap[g_Ip2Mac.at (InetSocketAddress::ConvertFrom (src).GetIpv4 ())].pktDelays.push_back ((Simulator::Now() - seqTs.GetTs ()).GetSeconds ());
     }
 }
 
@@ -109,7 +115,7 @@ int main (int argc, char *argv[])
   //LogComponentEnable ("ApWifiMac", LOG_LEVEL_ALL);
   double simulationTime {10}; //seconds
   std::string logDir {"output"};
-  double minDistance {1.0}; //meters
+  double minDistance {0.0}; //meters
   double maxDistance {5.0}; //meters
   std::size_t nStations {1};
   double apHeight {3}; //meters
@@ -128,14 +134,14 @@ int main (int argc, char *argv[])
   Time accessReqInterval {0};
   bool useRts {true};
   bool useExtendedBlockAck {false};
-  bool useHuaweiEdcaParams {true};
+  bool useSpecificEdcaParams {true};
 
-  uint32_t payloadSize = 700; // must fit in the max TX duration when transmitting at MCS 0 over an RU of 26 tones
+  uint32_t payloadSize = 740; // must fit in the max TX duration when transmitting at MCS 0 over an RU of 26 tones
   bool udp {true};
   bool downlink {true};
-  std::string trafficType {"Poisson"};
-  double interval {0.00001}; //seconds
-  std::string accessCategory {"AC_BE"};
+  std::string trafficType {"CBR"};
+  double interval {0.005}; //seconds
+  std::string accessCategory {"AC_VO"};
 
   CommandLine cmd (__FILE__);
   //Experiment set-up
@@ -162,7 +168,7 @@ int main (int argc, char *argv[])
   cmd.AddValue ("enableUlOfdma", "Enable UL OFDMA (useful if DL OFDMA is enabled and TCP is used)", enableUlOfdma);
   cmd.AddValue ("enableBsrp", "Enable BSRP (useful if DL and UL OFDMA are enabled and TCP is used)", enableBsrp);
   cmd.AddValue ("muSchedAccessReqInterval", "Duration of the interval between two requests for channel access made by the MU scheduler", accessReqInterval);
-  cmd.AddValue ("useHuaweiEdcaParams", "Enable/disable Huawei EDCA parameters set", useHuaweiEdcaParams);
+  cmd.AddValue ("useSpecificEdcaParams", "Enable/disable Specific EDCA parameters set", useSpecificEdcaParams);
 
   //Traffic params
   cmd.AddValue ("payloadSize", "The application payload size in bytes", payloadSize);
@@ -185,6 +191,10 @@ int main (int argc, char *argv[])
   if (useRts)
     {
       Config::SetDefault ("ns3::WifiRemoteStationManager::RtsCtsThreshold", StringValue ("0"));
+    }
+  else
+    {
+      Config::SetDefault ("ns3::WifiRemoteStationManager::RtsCtsThreshold", StringValue ("2200"));
     }
 
   if (dlAckSeqType == "ACK-SU-FORMAT")
@@ -219,8 +229,10 @@ int main (int argc, char *argv[])
 
   if (!udp)
     {
-        Config::SetDefault ("ns3::TcpSocket::SegmentSize", UintegerValue (payloadSize));
+      Config::SetDefault ("ns3::TcpSocket::SegmentSize", UintegerValue (payloadSize));
     }
+
+  Config::SetDefault ("ns3::RrMultiUserScheduler::UseCentral26TonesRus", BooleanValue (true));
 
   NodeContainer wifiStaNodes;
   wifiStaNodes.Create (nStations);
@@ -244,7 +256,7 @@ int main (int argc, char *argv[])
   wifiApNode.Get (0)->AggregateObject (apMobility);
 
   // WI-FI PHY & MAC
-  if (useHuaweiEdcaParams)
+  if (useSpecificEdcaParams)
     {
       //STA AIFSN
       Config::SetDefault ("ns3::HeConfiguration::MuBkAifsn", UintegerValue (7));
@@ -367,7 +379,7 @@ int main (int argc, char *argv[])
     }
 
   //overwrite slot, sifs, ack and rts/cts duration
-  if (useHuaweiEdcaParams)
+  if (useSpecificEdcaParams)
     {
       for (uint32_t i = 0; i < staDevices.GetN (); i++)
         {
@@ -414,6 +426,8 @@ int main (int argc, char *argv[])
       g_Ip2Mac[ip] = mac;
     }
 
+  //std::cout << "AP IP = " << apNodeInterface.Get (0).first->GetAddress (1, 0).GetAddress () << " MAC = " << Mac48Address::ConvertFrom (apDevice.Get (0)->GetAddress ()) << std::endl;
+
   /* Setting applications */
   ApplicationContainer serverApp;
   auto serverNodes = downlink ? std::ref (wifiStaNodes) : std::ref (wifiApNode);
@@ -445,7 +459,7 @@ int main (int argc, char *argv[])
           if (trafficType == "CBR") //CBR traffic
             {
               client.SetAttribute ("EnableRandom", BooleanValue (false));
-              client.SetAttribute ("Interval", TimeValue (Time ("0.00001")));
+              client.SetAttribute ("Interval", TimeValue (Seconds (interval)));
             }
           else //Poisson traffic
             {
@@ -527,11 +541,17 @@ int main (int argc, char *argv[])
 
   std::ofstream perStaOutStream;
   perStaOutStream.open ("per_sta_stats.out", std::ios::out);
-  perStaOutStream << "MAC addr\tSINR, dB\tRX bytes" << std::endl;
+  perStaOutStream << "MAC addr\tSINR, dB\tRX bytes\tAvg delay, ms" << std::endl;
   for (auto &staStats : g_statsMap)
     {
       staStats.second.sinr /= staStats.second.totalBeacons;
-      perStaOutStream << staStats.first << "\t" << staStats.second.sinr << "\t" << staStats.second.rxBytes << std::endl;
+      double sumDelay = 0.;
+      for (auto &delay : staStats.second.pktDelays)
+        {
+          sumDelay += delay * 1000.; //in ms
+        }
+      perStaOutStream << staStats.first << "\t" << staStats.second.sinr << "\t" << staStats.second.rxBytes 
+        << "\t" << sumDelay / staStats.second.pktDelays.size () << std::endl;
     }
   perStaOutStream.close ();
 

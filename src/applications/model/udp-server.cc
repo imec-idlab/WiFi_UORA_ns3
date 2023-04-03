@@ -29,8 +29,10 @@
 #include "ns3/socket-factory.h"
 #include "ns3/packet.h"
 #include "ns3/uinteger.h"
-#include "packet-loss-counter.h"
+#include "ns3/ipv4-packet-info-tag.h"
+#include "ns3/ipv6-packet-info-tag.h"
 
+#include "packet-loss-counter.h"
 #include "seq-ts-header.h"
 #include "udp-server.h"
 
