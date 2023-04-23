@@ -45,6 +45,7 @@ cmake-build-debug/
 cmake-build-relwithdebinfo/
 cmake-build-minsizerel/
 cmake-build-release/
+scratch/wifi-ax-simple1/results/
 
 .vscode/*
 !.vscode/launch.json

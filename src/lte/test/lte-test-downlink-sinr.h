@@ -1,4 +1,3 @@
-/* -*-  Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil; -*- */
 /*
  * Copyright (c) 2011 Centre Tecnologic de Telecomunicacions de Catalunya (CTTC)
  *
@@ -24,27 +23,23 @@
 #define LTE_TEST_DOWNLINK_SINR_H
 
 #include "ns3/spectrum-value.h"
-
 #include "ns3/test.h"
 
 using namespace ns3;
 
 /**
  * \ingroup lte-test
- * \ingroup tests
  *
  * \brief Test 1.1 SINR calculation in downlink
  */
 class LteDownlinkSinrTestSuite : public TestSuite
 {
-public:
-  LteDownlinkSinrTestSuite ();
+  public:
+    LteDownlinkSinrTestSuite();
 };
-
 
 /**
  * \ingroup lte-test
- * \ingroup tests
  *
  * \brief  Test compares if the generated SINR is equal to estimated SINR
  *  value. Test generates several calls to LteSpectrumPhy::StartRx corresponding
@@ -55,29 +50,27 @@ public:
  */
 class LteDownlinkDataSinrTestCase : public TestCase
 {
-public:
-  /**
-   * Constructor
-   *
-   * \param sv the spectrum value
-   * \param sinr the SINR
-   * \param name the name of the test
-   */
-  LteDownlinkDataSinrTestCase (Ptr<SpectrumValue> sv, Ptr<SpectrumValue> sinr, std::string name);
-  virtual ~LteDownlinkDataSinrTestCase ();
+  public:
+    /**
+     * Constructor
+     *
+     * \param sv the spectrum value
+     * \param sinr the SINR
+     * \param name the name of the test
+     */
+    LteDownlinkDataSinrTestCase(Ptr<SpectrumValue> sv, Ptr<SpectrumValue> sinr, std::string name);
+    ~LteDownlinkDataSinrTestCase() override;
 
-private:
-  virtual void DoRun (void);
+  private:
+    void DoRun() override;
 
-  Ptr<SpectrumValue> m_sv; ///< the spectrum value
-  Ptr<const SpectrumModel> m_sm; ///< the spectrum model
-  Ptr<SpectrumValue> m_expectedSinr; ///< the expected SINR
+    Ptr<SpectrumValue> m_sv;           ///< the spectrum value
+    Ptr<const SpectrumModel> m_sm;     ///< the spectrum model
+    Ptr<SpectrumValue> m_expectedSinr; ///< the expected SINR
 };
-
 
 /**
  * \ingroup lte-test
- * \ingroup tests
  *
  * \brief
  *  Test compares if the generated SINR is equal to estimated SINR value.
@@ -90,22 +83,22 @@ private:
 class LteDownlinkCtrlSinrTestCase : public TestCase
 {
   public:
-  /**
-   * Constructor
-   *
-   * \param sv the spectrum value
-   * \param sinr the SINR
-   * \param name the name of the test
-   */
-    LteDownlinkCtrlSinrTestCase (Ptr<SpectrumValue> sv, Ptr<SpectrumValue> sinr, std::string name);
-    virtual ~LteDownlinkCtrlSinrTestCase ();
+    /**
+     * Constructor
+     *
+     * \param sv the spectrum value
+     * \param sinr the SINR
+     * \param name the name of the test
+     */
+    LteDownlinkCtrlSinrTestCase(Ptr<SpectrumValue> sv, Ptr<SpectrumValue> sinr, std::string name);
+    ~LteDownlinkCtrlSinrTestCase() override;
 
-private:
-  virtual void DoRun (void);
+  private:
+    void DoRun() override;
 
-  Ptr<SpectrumValue> m_sv; ///< the spectrum value
-  Ptr<const SpectrumModel> m_sm; ///< the spectrum model
-  Ptr<SpectrumValue> m_expectedSinr; ///< the expected SINR
+    Ptr<SpectrumValue> m_sv;           ///< the spectrum value
+    Ptr<const SpectrumModel> m_sm;     ///< the spectrum model
+    Ptr<SpectrumValue> m_expectedSinr; ///< the expected SINR
 };
 
 #endif /* LTE_TEST_DOWNLINK_SINR_H */

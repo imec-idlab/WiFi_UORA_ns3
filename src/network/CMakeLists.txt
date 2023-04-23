@@ -68,6 +68,7 @@ set(source_files
     utils/simple-channel.cc
     utils/simple-net-device.cc
     utils/sll-header.cc
+    utils/timestamp-tag.cc
 )
 
 set(header_files
@@ -98,6 +99,7 @@ set(header_files
     model/tag-buffer.h
     model/tag.h
     model/trailer.h
+    test/header-serialization-test.h
     utils/address-utils.h
     utils/bit-deserializer.h
     utils/bit-serializer.h
@@ -145,6 +147,7 @@ set(header_files
     utils/simple-channel.h
     utils/simple-net-device.h
     utils/sll-header.h
+    utils/timestamp-tag.h
 )
 
 build_lib(
