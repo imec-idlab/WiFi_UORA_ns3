@@ -73,28 +73,26 @@ RrMultiUserScheduler::GetTypeId()
                           BooleanValue(true),
                           MakeBooleanAccessor(&RrMultiUserScheduler::m_enableBsrp),
                           MakeBooleanChecker())
-            .AddAttribute(
-                "UlPsduSize",
-                "The default size in bytes of the solicited PSDU (to be sent in a TB PPDU)",
-                UintegerValue(500),
-                MakeUintegerAccessor(&RrMultiUserScheduler::m_ulPsduSize),
-                MakeUintegerChecker<uint32_t>())
+            .AddAttribute("UlPsduSize",
+                          "The default size in bytes of the solicited PSDU (to be sent in a TB PPDU)",
+                          UintegerValue(500),
+                          MakeUintegerAccessor(&RrMultiUserScheduler::m_ulPsduSize),
+                          MakeUintegerChecker<uint32_t>())
             .AddAttribute("UseCentral26TonesRus",
                           "If enabled, central 26-tone RUs are allocated, too, when the "
                           "selected RU type is at least 52 tones.",
                           BooleanValue(false),
                           MakeBooleanAccessor(&RrMultiUserScheduler::m_useCentral26TonesRus),
                           MakeBooleanChecker())
-            .AddAttribute(
-                "MaxCredits",
-                "Maximum amount of credits a station can have. When transmitting a DL MU PPDU, "
-                "the amount of credits received by each station equals the TX duration (in "
-                "microseconds) divided by the total number of stations. Stations that are the "
-                "recipient of the DL MU PPDU have to pay a number of credits equal to the TX "
-                "duration (in microseconds) times the allocated bandwidth share",
-                TimeValue(Seconds(1)),
-                MakeTimeAccessor(&RrMultiUserScheduler::m_maxCredits),
-                MakeTimeChecker());
+            .AddAttribute("MaxCredits",
+                          "Maximum amount of credits a station can have. When transmitting a DL MU PPDU, "
+                          "the amount of credits received by each station equals the TX duration (in "
+                          "microseconds) divided by the total number of stations. Stations that are the "
+                          "recipient of the DL MU PPDU have to pay a number of credits equal to the TX "
+                          "duration (in microseconds) times the allocated bandwidth share",
+                          TimeValue(Seconds(1)),
+                          MakeTimeAccessor(&RrMultiUserScheduler::m_maxCredits),
+                          MakeTimeChecker());
     return tid;
 }
 
