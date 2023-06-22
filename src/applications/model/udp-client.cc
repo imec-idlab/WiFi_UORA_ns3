@@ -194,18 +194,7 @@ UdpClient::StartApplication (void)
   m_socket->SetRecvCallback (MakeNullCallback<void, Ptr<Socket> > ());
   m_socket->SetAllowBroadcast (true);
 
-  if (m_enableRandom)
-    {
-      m_sendEvent = Simulator::Schedule (Seconds(m_intervalRandomVariable->GetValue()), &UdpClient::Send, this);
-    }
-  else
-    {
-      Ptr<UniformRandomVariable> rand = CreateObject <UniformRandomVariable> ();
-      double delay = rand->GetValue (0, m_interval.GetSeconds ());
-      std::cout << "Initial TX after delay = " << delay << "s" << std::endl;
-      m_sendEvent = Simulator::Schedule (Seconds (delay), &UdpClient::Send, this);
-    }
-
+  m_sendEvent = Simulator::Schedule (Seconds(0), &UdpClient::Send, this);
 }
 
 void
