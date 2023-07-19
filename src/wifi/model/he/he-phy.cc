@@ -371,13 +371,17 @@ HePhy::StartReceivePreamble(Ptr<const WifiPpdu> ppdu,
                         << GetDuration(WIFI_PPDU_FIELD_TRAINING, txVector).As(Time::NS));
             Ptr<Event> event =
                 CreateInterferenceEvent(ppdu, txVector, rxDuration, rxPowersW, !ofdmaStarted);
-            uint16_t staId = GetStaId(ppdu);
-            NS_ASSERT(m_beginOfdmaPayloadRxEvents.find(staId) == m_beginOfdmaPayloadRxEvents.end());
-            m_beginOfdmaPayloadRxEvents[staId] =
-                Simulator::Schedule(GetDuration(WIFI_PPDU_FIELD_TRAINING, txVector),
-                                    &HePhy::StartReceiveOfdmaPayload,
-                                    this,
-                                    event);
+            if (!txVector.IsUlMu () || !m_busyRuIndexes.count (txVector.GetRu(GetStaId(ppdu)).GetIndex ()))
+            {
+                uint16_t staId = GetStaId(ppdu);
+                NS_ASSERT(m_beginOfdmaPayloadRxEvents.find(staId) == m_beginOfdmaPayloadRxEvents.end());
+                m_beginOfdmaPayloadRxEvents[staId] =
+                    Simulator::Schedule(GetDuration(WIFI_PPDU_FIELD_TRAINING, txVector),
+                                        &HePhy::StartReceiveOfdmaPayload,
+                                        this,
+                                        event);
+                m_busyRuIndexes.insert (txVector.GetRu(GetStaId(ppdu)).GetIndex ());
+            }
         }
         else
         {
@@ -949,6 +953,7 @@ HePhy::DoEndReceivePayload(Ptr<const WifiPpdu> ppdu)
             NotifyInterferenceRxEndAndClear(true); // reset WifiPhy
             m_rxHeTbPpdus = 0;
         }
+        m_busyRuIndexes.clear ();
     }
     else
     {

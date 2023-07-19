@@ -519,6 +519,8 @@ class HePhy : public VhtPhy
                                     //!< response HE TB PPDUs
     uint64_t m_currentMuPpduUid;    //!< UID of the HE MU or HE TB PPDU being received
 
+    std::set<size_t> m_busyRuIndexes; //!< for UL OFDMA UORA: keeps track of RU IDxs, for which receiption has been started
+
     std::map<uint16_t /* STA-ID */, EventId>
         m_beginOfdmaPayloadRxEvents; //!< the beginning of the OFDMA payload reception events
                                      //!< (indexed by STA-ID)
