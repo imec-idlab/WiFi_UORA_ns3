@@ -1500,16 +1500,36 @@ HeFrameExchangeManager::SetTargetRssi(CtrlTriggerHeader& trigger) const
         m_phy->GetPowerDbm(GetWifiRemoteStationManager()->GetDefaultTxPowerLevel())));
     for (auto& userInfo : trigger)
     {
-        const auto staList = m_apMac->GetStaList(m_linkId);
-        auto itAidAddr = staList.find(userInfo.GetAid12());
-        NS_ASSERT(itAidAddr != staList.end());
-        auto optRssi = GetMostRecentRssi(itAidAddr->second);
-        NS_ASSERT(optRssi);
-        int8_t rssi = static_cast<int8_t>(*optRssi);
-        rssi = (rssi >= -20)
+        if (userInfo.GetAid12())
+        {
+            const auto staList = m_apMac->GetStaList(m_linkId);
+            auto itAidAddr = staList.find(userInfo.GetAid12());
+            NS_ASSERT(itAidAddr != staList.end());
+            auto optRssi = GetMostRecentRssi(itAidAddr->second);
+            NS_ASSERT(optRssi);
+            int8_t rssi = static_cast<int8_t>(*optRssi);
+            rssi = (rssi >= -20)
                    ? -20
                    : ((rssi <= -110) ? -110 : rssi); // cap so as to keep within [-110; -20] dBm
-        userInfo.SetUlTargetRssi(rssi);
+            userInfo.SetUlTargetRssi(rssi);
+        }
+        else
+        {
+            //Workaround: for random access RU set maximum RSSI among all STAs
+            const auto staList = m_apMac->GetStaList(m_linkId);
+            int8_t maxRssi = INT8_MIN;
+            for (auto &sta : staList)
+            {
+                auto optRssi = GetMostRecentRssi(sta.second);
+                NS_ASSERT(optRssi);
+                int8_t rssi = static_cast<int8_t>(*optRssi);
+                if (rssi > maxRssi) maxRssi = rssi;
+            }
+            int8_t rssi = (maxRssi >= -20)
+                   ? -20
+                   : ((maxRssi <= -110) ? -110 : maxRssi); // cap so as to keep within [-110; -20] dBm
+            userInfo.SetUlTargetRssi(rssi);
+        }
     }
 }
 

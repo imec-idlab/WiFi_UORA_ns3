@@ -92,7 +92,12 @@ RrMultiUserScheduler::GetTypeId()
                           "duration (in microseconds) times the allocated bandwidth share",
                           TimeValue(Seconds(1)),
                           MakeTimeAccessor(&RrMultiUserScheduler::m_maxCredits),
-                          MakeTimeChecker());
+                          MakeTimeChecker())
+            .AddAttribute("NumRandomAccessRus",
+                          "Number of RUs that are reserved for random access",
+                          UintegerValue (0.),
+                          MakeUintegerAccessor (&RrMultiUserScheduler::m_numRaRus),
+                          MakeUintegerChecker<uint16_t> ());
     return tid;
 }
 
@@ -179,7 +184,7 @@ RrMultiUserScheduler::SelectTxFormat()
 
 template <class Func>
 WifiTxVector
-RrMultiUserScheduler::GetTxVectorForUlMu(Func canbeSolicited)
+RrMultiUserScheduler::GetTxVectorForUlMu(Func canbeSolicited, bool isBasicTrigger)
 {
     NS_LOG_FUNCTION(this);
 
@@ -283,7 +288,7 @@ RrMultiUserScheduler::GetTxVectorForUlMu(Func canbeSolicited)
         return txVector;
     }
 
-    FinalizeTxVector(txVector);
+    FinalizeTxVector(txVector, isBasicTrigger);
     return txVector;
 }
 
@@ -302,7 +307,7 @@ RrMultiUserScheduler::TrySendingBsrpTf()
     WifiTxVector txVector = GetTxVectorForUlMu([this](const MasterInfo& info) {
         const auto& staList = m_apMac->GetStaList(m_linkId);
         return staList.find(info.aid) != staList.cend();
-    });
+    }, false);
 
     if (txVector.GetHeMuUserInfoMap().empty())
     {
@@ -390,7 +395,7 @@ RrMultiUserScheduler::TrySendingBasicTf()
         const auto& staList = m_apMac->GetStaList(m_linkId);
         return staList.find(info.aid) != staList.cend() &&
                m_apMac->GetMaxBufferStatus(info.address) > 0;
-    });
+    }, true);
 
     if (txVector.GetHeMuUserInfoMap().empty())
     {
@@ -398,10 +403,15 @@ RrMultiUserScheduler::TrySendingBasicTf()
         return TxFormat::DL_MU_TX;
     }
 
+
     uint32_t maxBufferSize = 0;
 
     for (const auto& candidate : txVector.GetHeMuUserInfoMap())
     {
+        //AID 0 is for Random Access RUs
+        if (!candidate.first) {maxBufferSize = 253;continue;}//TODO: set to max buf size among users}
+
+        // AID non-zero
         auto address = m_apMac->GetMldOrLinkAddressByAid(candidate.first);
         NS_ASSERT_MSG(address, "AID " << candidate.first << " not found");
 
@@ -766,7 +776,7 @@ RrMultiUserScheduler::TrySendingDlMuPpdu()
 }
 
 void
-RrMultiUserScheduler::FinalizeTxVector(WifiTxVector& txVector)
+RrMultiUserScheduler::FinalizeTxVector(WifiTxVector& txVector, bool isBasicTrigger)
 {
     // Do not log txVector because GetTxVectorForUlMu() left RUs undefined and
     // printing them will crash the simulation
@@ -781,13 +791,43 @@ RrMultiUserScheduler::FinalizeTxVector(WifiTxVector& txVector)
 
     NS_LOG_DEBUG(nRusAssigned << " stations are being assigned a " << ruType << " RU");
 
-    if (!m_useCentral26TonesRus || m_candidates.size() == nRusAssigned)
+    //Calculate number of random access RUs
+    std::size_t nRandomAccessRus = 0;
+    if (isBasicTrigger)
+    {
+        nRandomAccessRus = m_numRaRus;
+        std::size_t totalRus = HeRu::GetNRus (m_allowedWidth, ruType);
+        std::size_t _26tonesRus = (m_useCentral26TonesRus) ? nCentral26TonesRus : 0;
+
+        if (totalRus + _26tonesRus < nRusAssigned + nRandomAccessRus)
+        {
+            if (_26tonesRus > 0 && _26tonesRus >= nRandomAccessRus)
+            {
+                nCentral26TonesRus -= nRandomAccessRus;
+            }
+            else
+            {
+                nCentral26TonesRus = 0;
+                std::size_t neededRus = nRandomAccessRus - _26tonesRus;
+                if (totalRus < neededRus)
+                {
+                    nRandomAccessRus = totalRus + _26tonesRus;
+                }
+                else
+                {
+                    nRusAssigned -= neededRus - (totalRus - nRusAssigned);
+                }
+            }
+        }
+    }
+
+    if (!m_useCentral26TonesRus || m_candidates.size() + nRandomAccessRus == nRusAssigned)
     {
         nCentral26TonesRus = 0;
     }
     else
     {
-        nCentral26TonesRus = std::min(m_candidates.size() - nRusAssigned, nCentral26TonesRus);
+        nCentral26TonesRus = std::min(m_candidates.size() + nRandomAccessRus - nRusAssigned, nCentral26TonesRus);
         NS_LOG_DEBUG(nCentral26TonesRus << " stations are being assigned a 26-tones RU");
     }
 
@@ -801,6 +841,7 @@ RrMultiUserScheduler::FinalizeTxVector(WifiTxVector& txVector)
     auto central26TonesRus = HeRu::GetCentral26TonesRus(m_allowedWidth, ruType);
     auto central26TonesRusIt = central26TonesRus.begin();
 
+    //assign RUs to users
     for (std::size_t i = 0; i < nRusAssigned + nCentral26TonesRus; i++)
     {
         NS_ASSERT(candidateIt != m_candidates.end());
@@ -816,6 +857,22 @@ RrMultiUserScheduler::FinalizeTxVector(WifiTxVector& txVector)
 
     // remove candidates that will not be served
     m_candidates.erase(candidateIt, m_candidates.end());
+
+    //assign random access RUs
+    uint8_t minMcs = UINT8_MAX;
+    uint8_t minNss = UINT8_MAX;
+    for (auto &user : heMuUserInfoMap)
+    {
+        if (user.second.mcs < minMcs) minMcs = user.second.mcs;
+        if (user.second.nss < minMcs) minNss = user.second.nss;
+    }
+    for (std::size_t i = 0; i < nRandomAccessRus; i++)
+    {
+        txVector.SetHeMuUserInfo(0, //AID 0 = RANDOM ACCESS RU
+                            {(ruSetIt != ruSet.end () ? *ruSetIt++ : *central26TonesRusIt++),
+                            minMcs,
+                            minNss});
+    }
 }
 
 void
@@ -875,7 +932,7 @@ RrMultiUserScheduler::ComputeDlMuInfo()
 
     DlMuInfo dlMuInfo;
     std::swap(dlMuInfo.txParams.m_txVector, m_txParams.m_txVector);
-    FinalizeTxVector(dlMuInfo.txParams.m_txVector);
+    FinalizeTxVector(dlMuInfo.txParams.m_txVector, false);
 
     m_txParams.Clear();
     Ptr<WifiMpdu> mpdu;

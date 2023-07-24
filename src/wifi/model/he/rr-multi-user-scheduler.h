@@ -99,7 +99,7 @@ class RrMultiUserScheduler : public MultiUserScheduler
      *         transmissions from suitable stations
      */
     template <class Func>
-    WifiTxVector GetTxVectorForUlMu(Func canBeSolicited);
+    WifiTxVector GetTxVectorForUlMu(Func canBeSolicited, bool isBasicTrigger);
 
     /**
      * Notify the scheduler that a station associated with the AP
@@ -137,7 +137,7 @@ class RrMultiUserScheduler : public MultiUserScheduler
      *
      * \param txVector the given TXVECTOR
      */
-    void FinalizeTxVector(WifiTxVector& txVector);
+    void FinalizeTxVector(WifiTxVector& txVector, bool isBasicTrigger);
     /**
      * Update credits of the stations in the given list considering that a PPDU having
      * the given duration is being transmitted or solicited by using the given TXVECTOR.
@@ -170,6 +170,8 @@ class RrMultiUserScheduler : public MultiUserScheduler
     CtrlTriggerHeader m_trigger;           //!< Trigger Frame to send
     WifiMacHeader m_triggerMacHdr;         //!< MAC header for Trigger Frame
     WifiTxParameters m_txParams;           //!< TX parameters
+
+    uint16_t m_numRaRus; //!< Number of RUs that are reserved for random access
 };
 
 } // namespace ns3

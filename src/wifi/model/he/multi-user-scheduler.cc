@@ -289,9 +289,12 @@ MultiUserScheduler::GetTriggerFrame(const CtrlTriggerHeader& trigger, uint8_t li
     if (trigger.GetNUserInfoFields() == 1)
     {
         auto aid = trigger.begin()->GetAid12();
-        auto aidAddrMapIt = m_apMac->GetStaList(linkId).find(aid);
-        NS_ASSERT(aidAddrMapIt != m_apMac->GetStaList(linkId).end());
-        receiver = aidAddrMapIt->second;
+        if (aid) //non-RA RU
+        {
+            auto aidAddrMapIt = m_apMac->GetStaList(linkId).find(aid);
+            NS_ASSERT(aidAddrMapIt != m_apMac->GetStaList(linkId).end());
+            receiver = aidAddrMapIt->second;
+        }
     }
 
     WifiMacHeader hdr(WIFI_MAC_CTL_TRIGGER);

@@ -709,36 +709,50 @@ WifiDefaultAckManager::TryUlMuTransmission(Ptr<const WifiMpdu> mpdu,
                 NS_LOG_INFO("Unallocated RU");
                 continue;
             }
-            NS_ABORT_MSG_IF(aid12 == 0 || aid12 > 2007, "Allocation of RA-RUs is not supported");
+            NS_ABORT_MSG_IF(aid12 > 2007, "Allocation of such RA-RUs is not supported");
 
-            NS_ASSERT(apMac->GetStaList(m_linkId).find(aid12) != apMac->GetStaList(m_linkId).end());
-            Mac48Address staAddress = apMac->GetStaList(m_linkId).find(aid12)->second;
-
-            // find a TID for which a BA agreement exists with the given originator
-            uint8_t tid = 0;
-            while (tid < 8 && !m_mac->GetBaAgreementEstablishedAsRecipient(staAddress, tid))
+            if (aid12)
             {
-                tid++;
+                NS_ASSERT(apMac->GetStaList(m_linkId).find(aid12) != apMac->GetStaList(m_linkId).end());
+                Mac48Address staAddress = apMac->GetStaList(m_linkId).find(aid12)->second;
+
+                // find a TID for which a BA agreement exists with the given originator
+                uint8_t tid = 0;
+                while (tid < 8 && !m_mac->GetBaAgreementEstablishedAsRecipient(staAddress, tid))
+                {
+                    tid++;
+                }
+                NS_ASSERT_MSG(tid < 8,
+                            "No Block Ack agreement established with originator " << staAddress);
+
+                std::size_t index = acknowledgment->baType.m_bitmapLen.size();
+                acknowledgment->stationsReceivingMultiStaBa.emplace(std::make_pair(staAddress, tid),
+                                                                    index);
+
+                // we assume the Block Acknowledgment context is used for the multi-STA BlockAck frame
+                // (since it requires the longest TX time due to the presence of a bitmap)
+                acknowledgment->baType.m_bitmapLen.push_back(
+                    m_mac->GetBaTypeAsRecipient(staAddress, tid).m_bitmapLen.at(0));
             }
-            NS_ASSERT_MSG(tid < 8,
-                          "No Block Ack agreement established with originator " << staAddress);
-
-            std::size_t index = acknowledgment->baType.m_bitmapLen.size();
-            acknowledgment->stationsReceivingMultiStaBa.emplace(std::make_pair(staAddress, tid),
-                                                                index);
-
-            // we assume the Block Acknowledgment context is used for the multi-STA BlockAck frame
-            // (since it requires the longest TX time due to the presence of a bitmap)
-            acknowledgment->baType.m_bitmapLen.push_back(
-                m_mac->GetBaTypeAsRecipient(staAddress, tid).m_bitmapLen.at(0));
         }
 
-        uint16_t staId = trigger.begin()->GetAid12();
-        acknowledgment->tbPpduTxVector = trigger.GetHeTbTxVector(staId);
-        acknowledgment->multiStaBaTxVector = GetWifiRemoteStationManager()->GetBlockAckTxVector(
-            apMac->GetStaList(m_linkId).find(staId)->second,
-            acknowledgment->tbPpduTxVector);
-        return std::unique_ptr<WifiUlMuMultiStaBa>(acknowledgment);
+        CtrlTriggerHeader::Iterator triggerIt = trigger.begin();
+        while (triggerIt != trigger.end () && !triggerIt->GetAid12()) triggerIt++;
+        if (triggerIt != trigger.end ())
+        {
+            uint16_t staId = triggerIt->GetAid12();
+            acknowledgment->tbPpduTxVector = trigger.GetHeTbTxVector(staId);
+            acknowledgment->multiStaBaTxVector = GetWifiRemoteStationManager()->GetBlockAckTxVector(
+                apMac->GetStaList(m_linkId).find(staId)->second,
+                acknowledgment->tbPpduTxVector);
+            return std::unique_ptr<WifiUlMuMultiStaBa>(acknowledgment);
+        }
+        else
+        {
+            //workaround: all RUs are allocated for random access
+            return std::unique_ptr<WifiAcknowledgment>(new WifiNoAck);
+        }
+
     }
     else if (trigger.IsBsrp())
     {

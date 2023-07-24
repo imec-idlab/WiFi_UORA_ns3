@@ -1476,7 +1476,7 @@ CtrlTriggerUserInfoField::GetUlDcm() const
 void
 CtrlTriggerUserInfoField::SetSsAllocation(uint8_t startingSs, uint8_t nSs)
 {
-    NS_ABORT_MSG_IF(m_aid12 == 0 || m_aid12 == 2045, "SS Allocation subfield not present");
+    NS_ABORT_MSG_IF(m_aid12 == 2045, "SS Allocation subfield not present");
     NS_ABORT_MSG_IF(!startingSs || startingSs > 8, "Starting SS must be from 1 to 8");
     NS_ABORT_MSG_IF(!nSs || nSs > 8, "Number of SS must be from 1 to 8");
 
