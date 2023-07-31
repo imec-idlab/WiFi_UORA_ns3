@@ -1860,6 +1860,15 @@ HePhy::GetRxPpduFromTxPpdu(Ptr<const WifiPpdu> ppdu)
         }
         auto hePpdu = DynamicCast<const HePpdu>(rxPpdu);
         NS_ASSERT(hePpdu);
+
+        HeMuUserInfo info;
+        Ptr<const WifiPsdu> psdu = hePpdu->GetPsdu (ppdu->GetTxVector ().GetBssColor (), ppdu->GetStaId ());
+        bool found = psdu->GetRaRuUserInfo (info);
+        if (m_trigVector->IsUlMu () && found)
+        {
+            m_trigVector->SetHeMuUserInfo (ppdu->GetStaId (), info); //No need to delete corresponding HeMuUserInfo with staId=0
+        }
+
         hePpdu->UpdateTxVectorForUlMu(m_trigVector);
         return rxPpdu;
     }

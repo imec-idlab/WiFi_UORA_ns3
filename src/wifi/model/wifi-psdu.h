@@ -22,6 +22,7 @@
 
 #include "wifi-mac-header.h"
 #include "wifi-mpdu.h"
+#include "wifi-tx-vector.h"
 
 #include "ns3/nstime.h"
 
@@ -96,6 +97,10 @@ class WifiPsdu : public SimpleRefCount<WifiPsdu>
      * \return the PSDU.
      */
     Ptr<const Packet> GetPacket() const;
+
+    void AddRaRuUserInfo (HeMuUserInfo info);
+
+    bool GetRaRuUserInfo (HeMuUserInfo& info) const;
 
     /**
      * \brief Get the header of the i-th MPDU
@@ -254,6 +259,9 @@ class WifiPsdu : public SimpleRefCount<WifiPsdu>
     bool m_isSingle;                       //!< true for an S-MPDU
     std::vector<Ptr<WifiMpdu>> m_mpduList; //!< list of constituent MPDUs
     uint32_t m_size;                       //!< the size of the PSDU in bytes
+
+    bool m_randomAccess;
+    HeMuUserInfo m_raRuUserInfo;
 };
 
 /**

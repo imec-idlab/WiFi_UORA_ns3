@@ -349,8 +349,9 @@ class HeFrameExchangeManager : public VhtFrameExchangeManager
      *
      * \param trigger the Basic Trigger Frame content
      * \param hdr the MAC header of the Basic Trigger Frame
+     * \param isRandomAccess bool variable, if true - perform UORA
      */
-    void ReceiveBasicTrigger(const CtrlTriggerHeader& trigger, const WifiMacHeader& hdr);
+    void ReceiveBasicTrigger(CtrlTriggerHeader& trigger, const WifiMacHeader& hdr, bool isRandomAccess);
 
     /**
      * Respond to a MU-BAR Trigger Frame (if permitted by UL MU CS mechanism).

@@ -96,6 +96,10 @@ class HeRu
          * \return true if the RU is in the primary 80 MHz channel and false otherwise
          */
         bool GetPrimary80MHz() const;
+
+        void SetRandomAccessFlag (bool isRandomAccess);
+        bool IsRandomAccess() const;
+
         /**
          * Get the RU PHY index
          *
@@ -125,6 +129,7 @@ class HeRu
         std::size_t m_index; /**< RU index (starting at 1) as defined by Tables 27-7
                                   to 27-9 of 802.11ax D8.0 */
         bool m_primary80MHz; //!< true if the RU is allocated in the primary 80MHz channel
+        bool m_isRandomAccess; //!< true if RU allocated according to UORA procedure
     };
 
     /**

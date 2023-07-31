@@ -419,14 +419,16 @@ HeRu::GetEqualizedRuAllocation(RuType ruType, bool isOdd)
 }
 
 HeRu::RuSpec::RuSpec()
-    : m_index(0) // indicates undefined RU
+    : m_index(0), // indicates undefined RU
+      m_isRandomAccess(false)
 {
 }
 
 HeRu::RuSpec::RuSpec(RuType ruType, std::size_t index, bool primary80MHz)
     : m_ruType(ruType),
       m_index(index),
-      m_primary80MHz(primary80MHz)
+      m_primary80MHz(primary80MHz),
+      m_isRandomAccess(false)
 {
     NS_ABORT_MSG_IF(index == 0, "Index cannot be zero");
 }
@@ -450,6 +452,19 @@ HeRu::RuSpec::GetPrimary80MHz() const
 {
     NS_ABORT_MSG_IF(m_index == 0, "Undefined RU");
     return m_primary80MHz;
+}
+
+bool
+HeRu::RuSpec::IsRandomAccess() const
+{
+    NS_ABORT_MSG_IF(m_index == 0, "Undefined RU");
+    return m_isRandomAccess;
+}
+
+void
+HeRu::RuSpec::SetRandomAccessFlag (bool isRandomAccess)
+{
+    m_isRandomAccess = isRandomAccess;
 }
 
 std::size_t

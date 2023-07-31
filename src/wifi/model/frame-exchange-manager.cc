@@ -24,6 +24,7 @@
 #include "wifi-mac-queue.h"
 #include "wifi-mac-trailer.h"
 #include "wifi-utils.h"
+#include "ap-wifi-mac.h"
 
 #include "ns3/abort.h"
 #include "ns3/log.h"
@@ -1060,6 +1061,19 @@ FrameExchangeManager::Receive(Ptr<const WifiPsdu> psdu,
     if (addr1.IsGroup() || addr1 == m_self)
     {
         // receive broadcast frames or frames addressed to us only
+        Ptr<ApWifiMac> apMac = DynamicCast<ApWifiMac> (m_mac);
+        if (apMac != nullptr)
+        {
+            HeMuUserInfo info;
+            if (psdu->GetRaRuUserInfo (info))
+            {
+                uint16_t staId = apMac->GetAssociationId (psdu->GetAddr2(), m_linkId);
+                HeRu::RuSpec ruSpec = txVector.GetRu (staId);
+                ruSpec.SetRandomAccessFlag (true);
+                txVector.SetRu (ruSpec, staId);
+            }
+        }
+
         if (psdu->GetNMpdus() == 1)
         {
             // if perMpduStatus is not empty (i.e., this MPDU is not included in an A-MPDU)

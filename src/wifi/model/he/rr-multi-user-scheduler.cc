@@ -842,16 +842,19 @@ RrMultiUserScheduler::FinalizeTxVector(WifiTxVector& txVector, bool isBasicTrigg
     auto central26TonesRusIt = central26TonesRus.begin();
 
     //assign RUs to users
+    if (isBasicTrigger)
+    {
+        std::cout << Simulator::Now().GetSeconds () << "s: Finalize TX vector: assigned normal RUs = " << nRusAssigned + nCentral26TonesRus << " RA RUs = " << nRandomAccessRus << std::endl;
+    }
     for (std::size_t i = 0; i < nRusAssigned + nCentral26TonesRus; i++)
     {
         NS_ASSERT(candidateIt != m_candidates.end());
         auto mapIt = heMuUserInfoMap.find(candidateIt->first->aid);
         NS_ASSERT(mapIt != heMuUserInfoMap.end());
 
-        txVector.SetHeMuUserInfo(mapIt->first,
-                                 {(i < nRusAssigned ? *ruSetIt++ : *central26TonesRusIt++),
-                                  mapIt->second.mcs,
-                                  mapIt->second.nss});
+        HeMuUserInfo info = {(i < nRusAssigned ? *ruSetIt++ : *central26TonesRusIt++), mapIt->second.mcs, mapIt->second.nss};
+        info.ru.SetRandomAccessFlag (false);
+        txVector.SetHeMuUserInfo(mapIt->first, info);
         candidateIt++;
     }
 
@@ -868,10 +871,9 @@ RrMultiUserScheduler::FinalizeTxVector(WifiTxVector& txVector, bool isBasicTrigg
     }
     for (std::size_t i = 0; i < nRandomAccessRus; i++)
     {
-        txVector.SetHeMuUserInfo(0, //AID 0 = RANDOM ACCESS RU
-                            {(ruSetIt != ruSet.end () ? *ruSetIt++ : *central26TonesRusIt++),
-                            minMcs,
-                            minNss});
+        HeMuUserInfo info = {(ruSetIt != ruSet.end () ? *ruSetIt++ : *central26TonesRusIt++), minMcs, minNss};
+        info.ru.SetRandomAccessFlag (true);
+        txVector.SetHeMuUserInfo(0, info); //AID 0 = RANDOM ACCESS RU
     }
 }
 

@@ -33,6 +33,8 @@
 #include "ns3/wifi-mac-queue.h"
 #include "ns3/wifi-mac-trailer.h"
 
+#include "ns3/random-variable-stream.h"
+
 #include <algorithm>
 #include <functional>
 
@@ -1698,14 +1700,39 @@ HeFrameExchangeManager::SendMultiStaBlockAck(const WifiTxParameters& txParams, T
 }
 
 void
-HeFrameExchangeManager::ReceiveBasicTrigger(const CtrlTriggerHeader& trigger,
-                                            const WifiMacHeader& hdr)
+HeFrameExchangeManager::ReceiveBasicTrigger(CtrlTriggerHeader& trigger,
+                                            const WifiMacHeader& hdr,
+                                            bool isRandomAccess)
 {
     NS_LOG_FUNCTION(this << trigger << hdr);
     NS_ASSERT(trigger.IsBasic());
     NS_ASSERT(m_staMac && m_staMac->IsAssociated());
 
     NS_LOG_DEBUG("Received a Trigger Frame (basic variant) soliciting a transmission");
+
+    //Simple version of UORA: just select random RU from available RUs with AID 0
+    if (isRandomAccess)
+    {
+        std::vector<uint16_t> raRus;
+
+        uint16_t idx = 0;
+        for (CtrlTriggerHeader::ConstIterator userInfoIt = trigger.begin (); userInfoIt != trigger.end(); userInfoIt++)
+        {
+            uint16_t staId = userInfoIt->GetAid12 ();
+            if (!staId) //RA RU
+            {
+                raRus.push_back (idx);
+            }
+            idx++;
+        }
+
+        //Change trigger: for randomly selected RA RU set AID to the STA AID
+        Ptr<UniformRandomVariable> rv = CreateObject<UniformRandomVariable> ();
+        uint16_t selectedRu = raRus.at(rv->GetValue(0, raRus.size()));
+        CtrlTriggerHeader::Iterator selectedRuIt = trigger.begin ();
+        std::advance(selectedRuIt, selectedRu);
+        selectedRuIt->SetAid12 (m_staMac->GetAssociationId());
+    }
 
     if (!UlMuCsMediumIdle(trigger))
     {
@@ -1785,12 +1812,22 @@ HeFrameExchangeManager::ReceiveBasicTrigger(const CtrlTriggerHeader& trigger,
     if (psdu)
     {
         psdu->SetDuration(hdr.GetDuration() - m_phy->GetSifs() - ppduDuration);
+        if (isRandomAccess)
+        {
+            HeMuUserInfo info = txParams.m_txVector.GetHeMuUserInfo (staId);
+            info.ru.SetRandomAccessFlag (true); //We have to set random access flag again because this information is not present in the packet
+            psdu->AddRaRuUserInfo (info);
+        }
         SendPsduMapWithProtection(WifiPsduMap{{staId, psdu}}, txParams);
     }
-    else
+    else if (!isRandomAccess)
     {
         // send QoS Null frames
         SendQosNullFramesInTbPpdu(trigger, hdr);
+    }
+    else
+    {
+        //RA no data -> no transmit
     }
 }
 
@@ -2148,8 +2185,8 @@ HeFrameExchangeManager::ReceiveMpdu(Ptr<const WifiMpdu> mpdu,
 
     const WifiMacHeader& hdr = mpdu->GetHeader();
 
-    if (txVector.IsUlMu() && m_txTimer.IsRunning() &&
-        m_txTimer.GetReason() == WifiTxTimer::WAIT_TB_PPDU_AFTER_BASIC_TF)
+    if (txVector.IsUlMu() && ((m_txTimer.IsRunning() && m_txTimer.GetReason() == WifiTxTimer::WAIT_TB_PPDU_AFTER_BASIC_TF)
+        || (txVector.GetRu(m_apMac->GetAssociationId(hdr.GetAddr2(), m_linkId)).IsRandomAccess())))
     {
         Mac48Address sender = hdr.GetAddr2();
         NS_ASSERT(m_txParams.m_acknowledgment &&
@@ -2520,13 +2557,33 @@ HeFrameExchangeManager::ReceiveMpdu(Ptr<const WifiMpdu> mpdu,
             CtrlTriggerHeader trigger;
             mpdu->GetPacket()->PeekHeader(trigger);
 
-            if (hdr.GetAddr1() != m_self &&
-                (!hdr.GetAddr1().IsBroadcast() || !m_staMac->IsAssociated() ||
-                 hdr.GetAddr2() != m_bssid // not sent by the AP this STA is associated with
-                 || trigger.FindUserInfoWithAid(m_staMac->GetAssociationId()) == trigger.end()))
+            if (hdr.GetAddr1() != m_self)
             {
-                // not addressed to us
-                return;
+               if (!hdr.GetAddr1().IsBroadcast() || !m_staMac->IsAssociated() ||
+                 hdr.GetAddr2() != m_bssid )// not sent by the AP this STA is associated with
+                {
+                    return;
+                }
+               if (trigger.FindUserInfoWithAid(m_staMac->GetAssociationId()) == trigger.end() && trigger.FindUserInfoWithRaRuAssociated () == trigger.end ())
+                {
+                    // not addressed to this STA and no random access
+                    return;
+                }
+            }
+
+            if (trigger.FindUserInfoWithAid(m_staMac->GetAssociationId()) == trigger.end()) //no STA AID in trigger frame
+            {
+                if (!trigger.IsBasic ()) return; //only basic trigger supports RA RUs
+                if (trigger.FindUserInfoWithRaRuAssociated () != trigger.end ())
+                {
+                    Simulator::Schedule(m_phy->GetSifs(),
+                                    &HeFrameExchangeManager::ReceiveBasicTrigger,
+                                    this,
+                                    trigger,
+                                    hdr,
+                                    true);
+                    return;
+                }
             }
 
             uint16_t staId = m_staMac->GetAssociationId();
@@ -2590,7 +2647,8 @@ HeFrameExchangeManager::ReceiveMpdu(Ptr<const WifiMpdu> mpdu,
                                     &HeFrameExchangeManager::ReceiveBasicTrigger,
                                     this,
                                     trigger,
-                                    hdr);
+                                    hdr,
+                                    false);
             }
             else if (trigger.IsBsrp())
             {
