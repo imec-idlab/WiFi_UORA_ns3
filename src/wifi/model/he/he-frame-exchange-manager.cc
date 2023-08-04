@@ -2185,8 +2185,10 @@ HeFrameExchangeManager::ReceiveMpdu(Ptr<const WifiMpdu> mpdu,
 
     const WifiMacHeader& hdr = mpdu->GetHeader();
 
+    bool isRandomAccess = false;
+    if (txVector.IsUlMu()) isRandomAccess = txVector.GetRu(m_apMac->GetAssociationId(hdr.GetAddr2(), m_linkId)).IsRandomAccess();
     if (txVector.IsUlMu() && ((m_txTimer.IsRunning() && m_txTimer.GetReason() == WifiTxTimer::WAIT_TB_PPDU_AFTER_BASIC_TF)
-        || (txVector.GetRu(m_apMac->GetAssociationId(hdr.GetAddr2(), m_linkId)).IsRandomAccess())))
+        || isRandomAccess))
     {
         Mac48Address sender = hdr.GetAddr2();
         NS_ASSERT(m_txParams.m_acknowledgment &&
@@ -2197,8 +2199,16 @@ HeFrameExchangeManager::ReceiveMpdu(Ptr<const WifiMpdu> mpdu,
 
         if (m_staExpectTbPpduFrom.find(sender) == m_staExpectTbPpduFrom.end())
         {
-            NS_LOG_WARN("Received a TB PPDU from an unexpected station: " << sender);
-            return;
+            if (isRandomAccess)
+            {
+                //received UORA ppdu
+                m_staExpectTbPpduFrom.insert (sender);
+            }
+            else
+            {
+                NS_LOG_WARN("Received a TB PPDU from an unexpected station: " << sender);
+                return;
+            }
         }
 
         if (hdr.IsBlockAckReq())
