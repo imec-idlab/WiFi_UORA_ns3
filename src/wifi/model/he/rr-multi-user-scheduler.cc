@@ -842,10 +842,6 @@ RrMultiUserScheduler::FinalizeTxVector(WifiTxVector& txVector, bool isBasicTrigg
     auto central26TonesRusIt = central26TonesRus.begin();
 
     //assign RUs to users
-    if (isBasicTrigger)
-    {
-        std::cout << Simulator::Now().GetSeconds () << "s: Finalize TX vector: assigned normal RUs = " << nRusAssigned + nCentral26TonesRus << " RA RUs = " << nRandomAccessRus << std::endl;
-    }
     for (std::size_t i = 0; i < nRusAssigned + nCentral26TonesRus; i++)
     {
         NS_ASSERT(candidateIt != m_candidates.end());
