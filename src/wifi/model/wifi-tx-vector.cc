@@ -206,7 +206,7 @@ WifiTxVector::GetNss(uint16_t staId) const
     {
         NS_ABORT_MSG_IF(staId > 2048, "STA-ID should be correctly set for MU (" << staId << ")");
         NS_ASSERT(m_muUserInfos.find(staId) != m_muUserInfos.end());
-        return m_muUserInfos.at(staId).nss;
+        return m_muUserInfos.find(staId)->second.nss;
     }
     return m_nss;
 }
@@ -272,7 +272,20 @@ WifiTxVector::SetMode(WifiMode mode, uint16_t staId)
 {
     NS_ABORT_MSG_IF(!IsMu(), "Not a MU transmission");
     NS_ABORT_MSG_IF(staId > 2048, "STA-ID should be correctly set for MU");
-    m_muUserInfos[staId].mcs = mode.GetMcsValue();
+    NS_ABORT_MSG_IF(!staId, "WifiTxVector::SetMode called for staId = 0");
+
+    auto it = m_muUserInfos.find (staId);
+    if (it != m_muUserInfos.end ())
+    {
+        it->second.mcs = mode.GetMcsValue();
+    }
+    else
+    {
+        HeMuUserInfo info;
+        info.mcs = mode.GetMcsValue();
+        m_muUserInfos.insert ({staId, info});
+    }
+
     m_modeInitialized = true;
 }
 
@@ -317,7 +330,19 @@ WifiTxVector::SetNss(uint8_t nss, uint16_t staId)
 {
     NS_ABORT_MSG_IF(!IsMu(), "Not a MU transmission");
     NS_ABORT_MSG_IF(staId > 2048, "STA-ID should be correctly set for MU");
-    m_muUserInfos[staId].nss = nss;
+    NS_ABORT_MSG_IF(!staId, "WifiTxVector::SetNss called for staId = 0");
+
+    auto it = m_muUserInfos.find (staId);
+    if (it != m_muUserInfos.end ())
+    {
+        it->second.nss = nss;
+    }
+    else
+    {
+        HeMuUserInfo info;
+        info.nss = nss;
+        m_muUserInfos.insert ({staId, info});
+    }
 }
 
 void
@@ -484,7 +509,7 @@ WifiTxVector::GetRu(uint16_t staId) const
 {
     NS_ABORT_MSG_IF(!IsMu(), "RU only available for MU");
     NS_ABORT_MSG_IF(staId > 2048, "STA-ID should be correctly set for MU");
-    return m_muUserInfos.at(staId).ru;
+    return m_muUserInfos.find(staId)->second.ru;
 }
 
 void
@@ -492,14 +517,26 @@ WifiTxVector::SetRu(HeRu::RuSpec ru, uint16_t staId)
 {
     NS_ABORT_MSG_IF(!IsMu(), "RU only available for MU");
     NS_ABORT_MSG_IF(staId > 2048, "STA-ID should be correctly set for MU");
-    m_muUserInfos[staId].ru = ru;
+    NS_ABORT_MSG_IF(!staId, "WifiTxVector::SetRu called for staId = 0");
+
+    auto it = m_muUserInfos.find (staId);
+    if (it != m_muUserInfos.end ())
+    {
+        it->second.ru = ru;
+    }
+    else
+    {
+        HeMuUserInfo info;
+        info.ru = ru;
+        m_muUserInfos.insert ({staId, info});
+    }
 }
 
 HeMuUserInfo
 WifiTxVector::GetHeMuUserInfo(uint16_t staId) const
 {
     NS_ABORT_MSG_IF(!IsMu(), "HE MU user info only available for MU");
-    return m_muUserInfos.at(staId);
+    return m_muUserInfos.find(staId)->second;
 }
 
 void
@@ -507,7 +544,17 @@ WifiTxVector::SetHeMuUserInfo(uint16_t staId, HeMuUserInfo userInfo)
 {
     NS_ABORT_MSG_IF(!IsMu(), "HE MU user info only available for MU");
     NS_ABORT_MSG_IF(staId > 2048, "STA-ID should be correctly set for MU");
-    m_muUserInfos[staId] = userInfo;
+
+    auto it = m_muUserInfos.find (staId);
+    if (it != m_muUserInfos.end () && staId) //for RA RUs we allow multiple instances
+    {
+        it->second = userInfo;
+    }
+    else
+    {
+        m_muUserInfos.insert ({staId, userInfo});
+    }
+
     m_modeInitialized = true;
     m_ruAllocation.clear();
 }

@@ -73,8 +73,15 @@ HePpdu::HePpdu(const WifiConstPsduMap& psdus,
     {
         for (const auto& heMuUserInfo : txVector.GetHeMuUserInfoMap())
         {
-            auto [it, ret] = m_muUserInfos.emplace(heMuUserInfo);
-            NS_ABORT_MSG_IF(!ret, "STA-ID " << heMuUserInfo.first << " already present");
+            std::size_t count = m_muUserInfos.count (heMuUserInfo.first);
+            if (count == 0 || !heMuUserInfo.first) //not present yet or RA RU
+            {
+                m_muUserInfos.emplace (heMuUserInfo);
+            }
+            else
+            {
+                NS_ABORT_MSG("STA-ID " << heMuUserInfo.first << " already present");
+            }
         }
         m_contentChannelAlloc = txVector.GetContentChannelAllocation();
         m_ruAllocation = txVector.GetRuAllocation();

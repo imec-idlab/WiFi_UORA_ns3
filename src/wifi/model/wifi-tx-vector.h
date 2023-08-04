@@ -101,7 +101,7 @@ class WifiTxVector
 {
   public:
     /// map of HE MU specific user info parameters indexed by STA-ID
-    typedef std::map<uint16_t /* staId */, HeMuUserInfo /* HE MU specific user info */>
+    typedef std::multimap<uint16_t /* staId */, HeMuUserInfo /* HE MU specific user info */>
         HeMuUserInfoMap;
 
     WifiTxVector();
