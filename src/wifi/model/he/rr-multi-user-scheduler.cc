@@ -409,7 +409,7 @@ RrMultiUserScheduler::TrySendingBasicTf()
     for (const auto& candidate : txVector.GetHeMuUserInfoMap())
     {
         //AID 0 is for Random Access RUs
-        if (!candidate.first) {maxBufferSize = 253;continue;}//TODO: set to max buf size among users}
+        if (!candidate.first) {maxBufferSize = m_ulPsduSize;continue;}//TODO: set to max buf size among users
 
         // AID non-zero
         auto address = m_apMac->GetMldOrLinkAddressByAid(candidate.first);
