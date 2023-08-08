@@ -27,6 +27,7 @@
 #include "wifi-protection.h"
 #include "wifi-tx-parameters.h"
 
+#include "ns3/he-phy.h"
 #include "ns3/he-frame-exchange-manager.h"
 #include "ns3/log.h"
 
@@ -750,7 +751,21 @@ WifiDefaultAckManager::TryUlMuTransmission(Ptr<const WifiMpdu> mpdu,
         else
         {
             //workaround: all RUs are allocated for random access
-            return std::unique_ptr<WifiAcknowledgment>(new WifiNoAck);
+            acknowledgment->tbPpduTxVector = trigger.GetHeTbTxVector(0);
+
+            WifiMode blockAckMode = GetWifiRemoteStationManager()->GetControlAnswerMode (HePhy::GetHeMcs(trigger.FindUserInfoWithAid(0)->GetUlMcs ()));
+            WifiTxVector v;
+            v.SetMode(blockAckMode);
+            v.SetPreambleType(
+                GetPreambleForTransmission(blockAckMode.GetModulationClass(), GetWifiRemoteStationManager()->GetShortPreambleEnabled()));
+            v.SetTxPowerLevel(GetWifiRemoteStationManager()->GetDefaultTxPowerLevel());
+            v.SetChannelWidth(GetWifiRemoteStationManager()->GetPhy ()->GetTxBandwidth(blockAckMode));
+            uint16_t blockAckTxGuardInterval = txParams.m_txVector.GetGuardInterval ();
+            v.SetGuardInterval(blockAckTxGuardInterval);
+            v.SetNss(1);
+
+            acknowledgment->multiStaBaTxVector = v;
+            return std::unique_ptr<WifiUlMuMultiStaBa>(acknowledgment);
         }
 
     }

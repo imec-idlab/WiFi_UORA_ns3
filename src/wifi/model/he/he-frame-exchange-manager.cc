@@ -1227,7 +1227,14 @@ HeFrameExchangeManager::TbPpduTimeout(WifiPsduMap* psduMap,
     NS_ASSERT(IsTrigger(*psduMap));
 
     // This method is called if some station(s) did not send a TB PPDU
-    NS_ASSERT(!staMissedTbPpduFrom->empty());
+    if (staMissedTbPpduFrom->empty())
+    {
+        //UORA: none of the STAs transmitted -> return
+        m_edca->ResetCw(m_linkId);
+        TransmissionSucceeded();
+        m_psduMap.clear();
+        return;
+    }
     NS_ASSERT(m_edca);
 
     if (staMissedTbPpduFrom->size() == nSolicitedStations)
