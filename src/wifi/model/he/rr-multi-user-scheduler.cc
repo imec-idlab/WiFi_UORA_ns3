@@ -97,7 +97,27 @@ RrMultiUserScheduler::GetTypeId()
                           "Number of RUs that are reserved for random access",
                           UintegerValue (0.),
                           MakeUintegerAccessor (&RrMultiUserScheduler::m_numRaRus),
-                          MakeUintegerChecker<uint16_t> ());
+                          MakeUintegerChecker<uint16_t> ())
+            .AddAttribute("RuAllocationType",
+                          "The type of RUs allocated to STAs, if undefined - dynamically selected based on the number of STAs",
+                          EnumValue (HeRu::RU_UNDEFINED),
+                          MakeEnumAccessor (&RrMultiUserScheduler::m_ruAllocationType),
+                          MakeEnumChecker (HeRu::RU_26_TONE,
+                                           "Ru-26-Tone",
+                                           HeRu::RU_52_TONE,
+                                           "Ru-52-Tone",
+                                           HeRu::RU_106_TONE,
+                                           "Ru-106-Tone",
+                                           HeRu::RU_242_TONE,
+                                           "Ru-242-Tone",
+                                           HeRu::RU_484_TONE,
+                                           "Ru-484-Tone",
+                                           HeRu::RU_996_TONE,
+                                           "Ru-996-Tone",
+                                           HeRu::RU_2x996_TONE,
+                                           "Ru-2x996-Tone",
+                                           HeRu::RU_UNDEFINED,
+                                           "Ru-Undefined"));
     return tid;
 }
 
@@ -191,8 +211,16 @@ RrMultiUserScheduler::GetTxVectorForUlMu(Func canbeSolicited, bool isBasicTrigge
     // determine RUs to allocate to stations
     auto count = std::min<std::size_t>(m_nStations, m_staListUl.size());
     std::size_t nCentral26TonesRus;
-    HeRu::GetEqualSizedRusForStations(m_allowedWidth, count, nCentral26TonesRus);
-    NS_ASSERT(count >= 1);
+    if (m_ruAllocationType == HeRu::RU_UNDEFINED)
+    {
+        HeRu::GetEqualSizedRusForStations(m_allowedWidth, count, nCentral26TonesRus);
+        NS_ASSERT(count >= 1);
+    }
+    else
+    {
+        count = std::min(HeRu::GetRusOfType (m_allowedWidth, m_ruAllocationType).size (), count);
+        nCentral26TonesRus = HeRu::GetCentral26TonesRus (m_allowedWidth, m_ruAllocationType).size ();
+    }
 
     if (!m_useCentral26TonesRus)
     {
@@ -619,8 +647,19 @@ RrMultiUserScheduler::TrySendingDlMuPpdu()
     std::size_t count =
         std::min(static_cast<std::size_t>(m_nStations), m_staListDl[primaryAc].size());
     std::size_t nCentral26TonesRus;
-    HeRu::RuType ruType =
+    HeRu::RuType ruType;
+    if (m_ruAllocationType == HeRu::RU_UNDEFINED)
+    {
+        ruType =
         HeRu::GetEqualSizedRusForStations(m_allowedWidth, count, nCentral26TonesRus);
+    }
+    else
+    {
+        ruType = m_ruAllocationType;
+        count = std::min(HeRu::GetRusOfType (m_allowedWidth, m_ruAllocationType).size (), count);
+        nCentral26TonesRus = HeRu::GetCentral26TonesRus (m_allowedWidth, m_ruAllocationType).size ();
+    }
+
     NS_ASSERT(count >= 1);
 
     if (!m_useCentral26TonesRus)
@@ -786,8 +825,18 @@ RrMultiUserScheduler::FinalizeTxVector(WifiTxVector& txVector, bool isBasicTrigg
     // compute how many stations can be granted an RU and the RU size
     std::size_t nRusAssigned = m_candidates.size();
     std::size_t nCentral26TonesRus;
-    HeRu::RuType ruType =
-        HeRu::GetEqualSizedRusForStations(m_allowedWidth, nRusAssigned, nCentral26TonesRus);
+
+    HeRu::RuType ruType;
+    if (m_ruAllocationType == HeRu::RU_UNDEFINED)
+    {
+        ruType = HeRu::GetEqualSizedRusForStations(m_allowedWidth, nRusAssigned, nCentral26TonesRus);
+    }
+    else
+    {
+        ruType = m_ruAllocationType;
+        nRusAssigned = std::min(HeRu::GetRusOfType (m_allowedWidth, m_ruAllocationType).size (), nRusAssigned);
+        nCentral26TonesRus = HeRu::GetCentral26TonesRus (m_allowedWidth, m_ruAllocationType).size ();
+    }
 
     NS_LOG_DEBUG(nRusAssigned << " stations are being assigned a " << ruType << " RU");
 

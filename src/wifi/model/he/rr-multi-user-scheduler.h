@@ -172,6 +172,7 @@ class RrMultiUserScheduler : public MultiUserScheduler
     WifiTxParameters m_txParams;           //!< TX parameters
 
     uint16_t m_numRaRus; //!< Number of RUs that are reserved for random access
+    HeRu::RuType m_ruAllocationType; //!< The type of RUs allocated to STAs
 };
 
 } // namespace ns3
