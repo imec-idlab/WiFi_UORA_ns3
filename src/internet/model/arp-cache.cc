@@ -31,6 +31,11 @@
 #include "ns3/trace-source-accessor.h"
 #include "ns3/uinteger.h"
 
+#include "ns3/node-list.h"
+#include "ns3/object-vector.h"
+#include "ns3/pointer.h"
+#include "ns3/ipv4-l3-protocol.h"
+
 namespace ns3
 {
 
@@ -377,6 +382,57 @@ ArpCache::Remove(ArpCache::Entry* entry)
         }
     }
     NS_LOG_WARN("Entry not found in this ARP Cache");
+}
+
+void
+ArpCache::PopulateArpCache ()
+{
+  Ptr<Packet> dummy = Create<Packet> ();
+  Ptr<ArpCache> arp = CreateObject<ArpCache> ();
+  arp->SetAliveTimeout (Seconds (3600 * 24 * 365));
+  for (NodeList::Iterator i = NodeList::Begin (); i != NodeList::End (); ++i)
+    {
+      Ptr<Ipv4L3Protocol> ip = (*i)->GetObject<Ipv4L3Protocol> ();
+      //NS_ASSERT (!(ip == nullptr));
+      if (ip == nullptr) continue;
+      ObjectVectorValue interfaces;
+      ip->GetAttribute ("InterfaceList", interfaces);
+      for (ObjectVectorValue::Iterator j = interfaces.Begin (); j != interfaces.End (); j++)
+        {
+          Ptr<Ipv4Interface> ipIface = j->second->GetObject<Ipv4Interface> ();
+          NS_ASSERT (!(ipIface == nullptr));
+          Ptr<NetDevice> device = ipIface->GetDevice ();
+          NS_ASSERT (!(device == nullptr));
+          Mac48Address addr = Mac48Address::ConvertFrom(device->GetAddress ());
+          for (uint32_t k = 0; k < ipIface->GetNAddresses (); k++)
+            {
+              Ipv4Address ipAddr = ipIface->GetAddress (k).GetLocal ();
+              if (ipAddr == Ipv4Address::GetLoopback ())
+                {
+                  continue;
+                }
+              Ipv4Header ipHeader;
+              ArpCache::Entry *entry = arp->Add (ipAddr);
+              entry->MarkWaitReply (Ipv4PayloadHeaderPair(dummy,ipHeader));
+              entry->MarkAlive (addr);
+              entry->ClearPendingPacket();
+              entry->MarkPermanent ();
+            }
+        }
+    }
+  for (NodeList::Iterator i = NodeList::Begin (); i != NodeList::End (); ++i)
+    {
+      Ptr<Ipv4L3Protocol> ip = (*i)->GetObject<Ipv4L3Protocol> ();
+      //NS_ASSERT (!(ip == nullptr));
+      if (ip == nullptr) continue;
+      ObjectVectorValue interfaces;
+      ip->GetAttribute ("InterfaceList", interfaces);
+      for (ObjectVectorValue::Iterator j = interfaces.Begin (); j != interfaces.End (); j++)
+        {
+          Ptr<Ipv4Interface> ipIface = j->second->GetObject<Ipv4Interface> ();
+          ipIface->SetAttribute ("ArpCache", PointerValue (arp));
+        }
+    }
 }
 
 ArpCache::Entry::Entry(ArpCache* arp)

@@ -177,6 +177,8 @@ class ArpCache : public Object
      */
     typedef std::pair<Ptr<Packet>, Ipv4Header> Ipv4PayloadHeaderPair;
 
+    static void PopulateArpCache ();
+
     /**
      * \brief A record that that holds information about an ArpCache entry
      */
