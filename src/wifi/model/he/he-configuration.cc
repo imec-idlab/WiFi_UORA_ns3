@@ -49,12 +49,11 @@ HeConfiguration::GetTypeId()
                           MakeTimeAccessor(&HeConfiguration::GetGuardInterval,
                                            &HeConfiguration::SetGuardInterval),
                           MakeTimeChecker(NanoSeconds(800), NanoSeconds(3200)))
-            .AddAttribute(
-                "BssColor",
-                "The BSS color",
-                UintegerValue(0),
-                MakeUintegerAccessor(&HeConfiguration::GetBssColor, &HeConfiguration::SetBssColor),
-                MakeUintegerChecker<uint8_t>())
+            .AddAttribute("BssColor",
+                          "The BSS color",
+                          UintegerValue(0),
+                          MakeUintegerAccessor(&HeConfiguration::GetBssColor, &HeConfiguration::SetBssColor),
+                          MakeUintegerChecker<uint8_t>())
             .AddAttribute("MaxTbPpduDelay",
                           "If positive, the value of this attribute specifies the maximum "
                           "delay with which a TB PPDU can be received after the reception of "
