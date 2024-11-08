@@ -1733,12 +1733,19 @@ HeFrameExchangeManager::ReceiveBasicTrigger(CtrlTriggerHeader& trigger,
             idx++;
         }
 
+        Ptr<QosTxop> edca = m_staMac->GetQosTxop(trigger.FindUserInfoWithAid(m_staMac->GetAssociationId())->GetPreferredAc());
+        uint8_t obo = edca->GetObo(m_linkId) - raRus.size();
+        if (!obo){
         //Change trigger: for randomly selected RA RU set AID to the STA AID
-        Ptr<UniformRandomVariable> rv = CreateObject<UniformRandomVariable> ();
-        uint16_t selectedRu = raRus.at(rv->GetValue(0, raRus.size()));
-        CtrlTriggerHeader::Iterator selectedRuIt = trigger.begin ();
-        std::advance(selectedRuIt, selectedRu);
-        selectedRuIt->SetAid12 (m_staMac->GetAssociationId());
+          Ptr<UniformRandomVariable> rv = CreateObject<UniformRandomVariable> ();
+          uint16_t selectedRu = raRus.at(rv->GetValue(0, raRus.size()));
+          CtrlTriggerHeader::Iterator selectedRuIt = trigger.begin ();
+          std::advance(selectedRuIt, selectedRu);
+          selectedRuIt->SetAid12 (m_staMac->GetAssociationId());
+        }
+        else {
+          edca->UpdateOcwObo(0, obo, m_linkId);
+        }
     }
 
     if (!UlMuCsMediumIdle(trigger))

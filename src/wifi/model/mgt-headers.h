@@ -40,6 +40,7 @@
 #include "ns3/ht-operation.h"
 #include "ns3/mac48-address.h"
 #include "ns3/mu-edca-parameter-set.h"
+#include "ns3/uora-parameter-set.h"
 #include "ns3/multi-link-element.h"
 #include "ns3/vht-capabilities.h"
 #include "ns3/vht-operation.h"
@@ -552,6 +553,12 @@ class MgtAssocResponseHeader : public Header
      */
     const std::optional<MuEdcaParameterSet>& GetMuEdcaParameterSet() const;
     /**
+     * Return the UORA Parameter Set, if present.
+     *
+     * \return the UORA Parameter Set, if present
+     */
+    const std::optional<UoraParameterSet>& GetUoraParameterSet() const;
+    /**
      * Set the Capability information.
      *
      * \param capabilities Capability information
@@ -666,6 +673,16 @@ class MgtAssocResponseHeader : public Header
     void SetMuEdcaParameterSet(MuEdcaParameterSet&& muEdcaParameterSet);
 
     /**
+     * Set the UORA Parameter Set.
+     *
+     * \param uoraParameterSet the UORA Parameter Set
+     */
+    void SetUoraParameterSet(const UoraParameterSet& uoraParameterSet);
+
+    /** \copydoc SetUoraParameterSet */
+    void SetUoraParameterSet(UoraParameterSet&& uoraParameterSet);
+
+    /**
      * Set the HE capabilities.
      *
      * \param heCapabilities HE capabilities
@@ -741,6 +758,7 @@ class MgtAssocResponseHeader : public Header
     std::optional<HeCapabilities> m_heCapability;             //!< HE capabilities
     std::optional<HeOperation> m_heOperation;                 //!< HE operation
     std::optional<MuEdcaParameterSet> m_muEdcaParameterSet;   //!< MU EDCA Parameter Set
+    std::optional<UoraParameterSet> m_uoraParameterSet;       //!< UORA Parameter Set
     std::optional<EhtCapabilities> m_ehtCapability;           //!< EHT capabilities
     std::optional<EhtOperation> m_ehtOperation;               //!< EHT Operation
     std::optional<MultiLinkElement> m_multiLinkElement;       //!< Multi-Link Element
@@ -1007,6 +1025,12 @@ class MgtProbeResponseHeader : public Header
      * \return the MU EDCA Parameter Set, if present
      */
     const std::optional<MuEdcaParameterSet>& GetMuEdcaParameterSet() const;
+    /**
+     * Return the UORA Parameter Set, if present.
+     *
+     * \return the UORA Parameter Set, if present
+     */
+    const std::optional<UoraParameterSet>& GetUoraParameterSet() const;
 
     /**
      * Return the Reduced Neighbor Report information element, if present.
@@ -1188,6 +1212,16 @@ class MgtProbeResponseHeader : public Header
     void SetMuEdcaParameterSet(MuEdcaParameterSet&& muEdcaParameterSet);
 
     /**
+     * Set the UORA Parameter Set.
+     *
+     * \param uoraParameterSet the UORA Parameter Set
+     */
+    void SetUoraParameterSet(const UoraParameterSet& uoraParameterSet);
+
+    /** \copydoc SetUoraParameterSet */
+    void SetUoraParameterSet(UoraParameterSet&& uoraParameterSet);
+
+    /**
      * Set the Reduced Neighbor Report information element
      *
      * \param reducedNeighborReport the Reduced Neighbor Report information element
@@ -1242,6 +1276,7 @@ class MgtProbeResponseHeader : public Header
     std::optional<ErpInformation> m_erpInformation;           //!< ERP information
     std::optional<EdcaParameterSet> m_edcaParameterSet;       //!< EDCA Parameter Set
     std::optional<MuEdcaParameterSet> m_muEdcaParameterSet;   //!< MU EDCA Parameter Set
+    std::optional<UoraParameterSet> m_uoraParameterSet;   //!< UORA Parameter Set
     std::optional<EhtCapabilities> m_ehtCapability;           //!< EHT capabilities
     std::optional<EhtOperation> m_ehtOperation;               //!< EHT Operation
     std::optional<ReducedNeighborReport>

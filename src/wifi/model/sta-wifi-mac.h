@@ -457,6 +457,26 @@ class StaWifiMac : public WifiMac
                              uint16_t cwMax,
                              uint8_t aifsn,
                              Time muEdcaTimer);
+
+    /**
+     * Set the UORA parameters.
+     *
+     * \param ac the Access Category
+     * \param ocwMin the minimum contention window size
+     * \param ocwMax the maximum contention window size
+     */
+    void SetUoraParameters(AcIndex ac,
+                             uint8_t ocwMin,
+                             uint8_t ocwMax);
+
+    /**
+     * Set the UORA parameters.
+     *
+     * \param ac the Access Category
+     * \param ocwMin the minimum contention window size
+     * \param ocwMax the maximum contention window size
+     */
+    void SetOcwObo(AcIndex ac);
     /**
      * Return the Capability information for the given link.
      *

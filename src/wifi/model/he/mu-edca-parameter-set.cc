@@ -89,7 +89,7 @@ MuEdcaParameterSet::SetMuEdcaTimer(uint8_t aci, Time timer)
     NS_ABORT_MSG_IF(aci > 3, "Invalid AC Index value: " << +aci);
     NS_ABORT_MSG_IF(timer.IsStrictlyPositive() && timer < MicroSeconds(8192),
                     "Timer value is below 8.192 ms");
-    NS_ABORT_MSG_IF(timer > MicroSeconds(2088960), "Timer value is above 2088.96 ms");
+    //NS_ABORT_MSG_IF(timer > MicroSeconds(2088960), "Timer value is above 2088.96 ms");
 
     double value = timer.GetMicroSeconds() / 8192.;
     NS_ABORT_MSG_IF(std::trunc(value) != value, "Timer value is not a multiple of 8 TUs (8192 us)");

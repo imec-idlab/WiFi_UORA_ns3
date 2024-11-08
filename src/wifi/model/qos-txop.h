@@ -391,6 +391,31 @@ class QosTxop : public Txop
      */
     bool EdcaDisabled(uint8_t linkId) const;
     /**
+     * Set the minimum contention window size to use while the MU EDCA Timer
+     * is running for the given link.
+     *
+     * \param ocwMin the minimum contention window size.
+     * \param linkId the ID of the given link
+     */
+    void SetOcwMin(uint8_t ocwMin, uint8_t linkId);
+    /**
+     * Set the maximum contention window size to use while the MU EDCA Timer
+     * is running for the given link.
+     *
+     * \param ocwMax the maximum contention window size.
+     * \param linkId the ID of the given link
+     */
+    void SetOcwMax(uint8_t ocwMax, uint8_t linkId);
+    /**
+     * Update the O CW and OBO: If OBO is given, then only update that else use
+     * OCW to get a new OBO.
+     *
+     * \param ocw the O contention window size.
+     * \param OBO.
+     * \param linkId the ID of the given link
+     */
+    void UpdateOcwObo(uint8_t ocw, uint8_t obo, uint8_t linkId);
+    /**
      * For the given link, return the minimum contention window size from the
      * EDCA Parameter Set or the MU EDCA Parameter Set, depending on whether the
      * MU EDCA Timer is running or not.
@@ -417,6 +442,38 @@ class QosTxop : public Txop
      * \return the number of slots that currently make up an AIFS.
      */
     uint8_t GetAifsn(uint8_t linkId) const override;
+    /**
+     * For the given link, return the minimum contention window size from the
+     * UORA Parameter.
+     *
+     * \param linkId the ID of the given link
+     * \return the currently used minimum contention window size.
+     */
+    uint8_t GetOcwMin(uint8_t linkId) const;
+    /**
+     * For the given link, return the maximum contention window size from the
+     * UORA Parameter Set.
+     *
+     * \param linkId the ID of the given link
+     * \return the currently used maximum contention window size.
+     */
+    uint8_t GetOcwMax(uint8_t linkId) const;
+    /**
+     * For the given link, return the maximum contention window size from the
+     * UORA Parameter Set.
+     *
+     * \param linkId the ID of the given link
+     * \return the currently used maximum contention window size.
+     */
+    uint8_t GetObo(uint8_t linkId) const;
+    /**
+     * For the given link, return the maximum contention window size from the
+     * UORA Parameter Set.
+     *
+     * \param linkId the ID of the given link
+     * \return the currently used maximum contention window size.
+     */
+    uint8_t GetOcw(uint8_t linkId) const;
 
   protected:
     /**
@@ -434,6 +491,10 @@ class QosTxop : public Txop
         uint32_t muCwMin{0};          //!< the MU CW minimum
         uint32_t muCwMax{0};          //!< the MU CW maximum
         uint8_t muAifsn{0};           //!< the MU AIFSN
+        uint8_t ocwMin{0};            //!< the O CW minimum
+        uint8_t ocwMax{0};            //!< the O CW maximum
+        uint8_t m_ocw{0};            //!< the OCW
+        uint8_t m_obo{0};            //!< the OBO maximum
         Time muEdcaTimer{0};          //!< the MU EDCA Timer
         Time muEdcaTimerStartTime{0}; //!< last start time of the MU EDCA Timer
     };

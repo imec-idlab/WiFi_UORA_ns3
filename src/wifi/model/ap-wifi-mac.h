@@ -37,6 +37,7 @@ class DsssParameterSet;
 class ErpInformation;
 class EdcaParameterSet;
 class MuEdcaParameterSet;
+class UoraParameterSet;
 class ReducedNeighborReport;
 class MultiLinkElement;
 class HtOperation;
@@ -252,7 +253,7 @@ class ApWifiMac : public WifiMac
      * was an association response to the receiver, we record that
      * the receiver is not associated with us yet.
      *
-     * \param timeoutReason the reason why the TX timer was started (\see WifiTxTimer::Reason)
+     * \param seoutReason the reason why the TX timer was started (\see WifiTxTimer::Reason)
      * \param mpdu the MPDU that we failed to sent
      */
     void TxFailed(WifiMacDropReason timeoutReason, Ptr<const WifiMpdu> mpdu);
@@ -383,6 +384,13 @@ class ApWifiMac : public WifiMac
      * \return the MU EDCA Parameter Set that needs to be advertised (if any)
      */
     std::optional<MuEdcaParameterSet> GetMuEdcaParameterSet() const;
+    /**
+     * Return the UORA Parameter Set of the current AP, if one needs to be advertised
+     *
+     * \return the UORA Parameter Set that needs to be advertised (if any)
+     */
+    std::optional<UoraParameterSet> GetUoraParameterSet() const;
+
     /**
      * Return the Reduced Neighbor Report (RNR) element that the current AP sends
      * on the given link, if one needs to be advertised.

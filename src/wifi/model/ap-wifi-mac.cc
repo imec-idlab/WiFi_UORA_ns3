@@ -625,6 +625,28 @@ ApWifiMac::GetMuEdcaParameterSet() const
     return std::nullopt;
 }
 
+std::optional<UoraParameterSet>
+ApWifiMac::GetUoraParameterSet() const
+{
+    NS_LOG_FUNCTION(this);
+    NS_ASSERT(GetHeSupported());
+
+    Ptr<HeConfiguration> heConfiguration = GetHeConfiguration();
+    NS_ASSERT(heConfiguration);
+
+    UoraParameterSet  uoraParameters;
+    UintegerValue uintegerValue;
+
+    heConfiguration->GetAttribute("OCwMin", uintegerValue);
+    uoraParameters.SetOCwMin(uintegerValue.Get());
+
+    heConfiguration->GetAttribute("OCwMax", uintegerValue);
+    uoraParameters.SetOCwMax(uintegerValue.Get());
+
+    return uoraParameters;
+}
+
+
 std::optional<ReducedNeighborReport>
 ApWifiMac::GetReducedNeighborReport(uint8_t linkId) const
 {
@@ -958,6 +980,10 @@ ApWifiMac::SendProbeResp(Mac48Address to, uint8_t linkId)
         {
             probe.SetMuEdcaParameterSet(std::move(*muEdcaParameterSet));
         }
+        if (auto uoraParameterSet = GetUoraParameterSet(); uoraParameterSet.has_value())
+        {
+           probe.SetUoraParameterSet(std::move(*uoraParameterSet));
+        }
     }
     if (GetEhtSupported())
     {
@@ -1057,6 +1083,10 @@ ApWifiMac::GetAssocResp(Mac48Address to, uint8_t linkId)
         if (auto muEdcaParameterSet = GetMuEdcaParameterSet(); muEdcaParameterSet.has_value())
         {
             assoc.SetMuEdcaParameterSet(std::move(*muEdcaParameterSet));
+        }
+        if (auto uoraParameterSet = GetUoraParameterSet(); uoraParameterSet.has_value())
+        {
+           assoc.SetUoraParameterSet(std::move(*uoraParameterSet));
         }
     }
     if (GetEhtSupported())
@@ -1382,6 +1412,11 @@ ApWifiMac::SendOneBeacon(uint8_t linkId)
         {
             beacon.SetMuEdcaParameterSet(std::move(*muEdcaParameterSet));
         }
+        if (auto uoraParameterSet = GetUoraParameterSet(); uoraParameterSet.has_value())
+        {
+           beacon.SetUoraParameterSet(std::move(*uoraParameterSet));
+        }
+
     }
     if (GetEhtSupported())
     {

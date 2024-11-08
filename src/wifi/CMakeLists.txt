@@ -47,6 +47,7 @@ set(source_files
     model/he/he-ppdu.cc
     model/he/he-ru.cc
     model/he/mu-edca-parameter-set.cc
+    model/he/uora-parameter-set.cc
     model/he/mu-snr-tag.cc
     model/he/multi-user-scheduler.cc
     model/he/obss-pd-algorithm.cc
@@ -196,6 +197,7 @@ set(header_files
     model/he/he-ppdu.h
     model/he/he-ru.h
     model/he/mu-edca-parameter-set.h
+    model/he/uora-parameter-set.h
     model/he/mu-snr-tag.h
     model/he/multi-user-scheduler.h
     model/he/obss-pd-algorithm.h

@@ -1041,6 +1041,15 @@ StaWifiMac::ReceiveAssocResp(Ptr<const WifiMpdu> mpdu, uint8_t linkId)
         UpdateApInfo(assocResp, hdr.GetAddr2(), hdr.GetAddr3(), linkId);
         NS_ASSERT(GetLink(linkId).bssid.has_value() && *GetLink(linkId).bssid == hdr.GetAddr3());
         SetBssid(hdr.GetAddr3(), linkId);
+        auto& uoraParameters = assocResp.GetUoraParameterSet();
+        if (GetHeSupported() && uoraParameters.has_value())
+        {
+          SetOcwObo(AC_BE);
+          SetOcwObo(AC_BK);
+          SetOcwObo(AC_VI);
+          SetOcwObo(AC_VO);
+        }
+
         if ((GetNLinks() > 1) && assocResp.GetMultiLinkElement().has_value())
         {
             // this is an ML setup, trace the MLD address (only once)
@@ -1363,6 +1372,23 @@ StaWifiMac::UpdateApInfo(const MgtFrameType& frame,
                                 muEdcaParameters->GetMuEdcaTimer(AC_VO));
         }
 
+        const auto& uoraParameters = frame.GetUoraParameterSet();
+        if (uoraParameters.has_value())
+        {
+          SetUoraParameters(AC_BE,
+                            uoraParameters->GetOCwMin(),
+                            uoraParameters->GetOCwMax());
+          SetUoraParameters(AC_BK,
+                            uoraParameters->GetOCwMin(),
+                            uoraParameters->GetOCwMax());
+          SetUoraParameters(AC_VI,
+                            uoraParameters->GetOCwMin(),
+                            uoraParameters->GetOCwMax());
+          SetUoraParameters(AC_VO,
+                            uoraParameters->GetOCwMin(),
+                            uoraParameters->GetOCwMax());
+        }
+
         if (!GetEhtSupported())
         {
             return;
@@ -1440,6 +1466,24 @@ StaWifiMac::SetMuEdcaParameters(AcIndex ac,
     edca->SetMuCwMax(cwMax, SINGLE_LINK_OP_ID);
     edca->SetMuAifsn(aifsn, SINGLE_LINK_OP_ID);
     edca->SetMuEdcaTimer(muEdcaTimer, SINGLE_LINK_OP_ID);
+}
+
+void
+StaWifiMac::SetUoraParameters(AcIndex ac,
+                                uint8_t ocwMin,
+                                uint8_t ocwMax
+                                )
+{
+    Ptr<QosTxop> edca = GetQosTxop(ac);
+    edca->SetOcwMin(ocwMin, SINGLE_LINK_OP_ID);
+    edca->SetOcwMax(ocwMax, SINGLE_LINK_OP_ID);
+}
+
+void
+StaWifiMac::SetOcwObo(AcIndex ac)
+{
+    Ptr<QosTxop> edca = GetQosTxop(ac);
+    edca->UpdateOcwObo(edca->GetOcwMin(SINGLE_LINK_OP_ID), 0, SINGLE_LINK_OP_ID);
 }
 
 void

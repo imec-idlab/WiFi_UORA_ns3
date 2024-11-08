@@ -184,6 +184,33 @@ QosTxop::SetMuCwMax(uint16_t cwMax, uint8_t linkId)
 }
 
 void
+QosTxop::SetOcwMin(uint8_t ocwMin, uint8_t linkId)
+{
+    NS_LOG_FUNCTION(this << ocwMin << +linkId);
+    GetLink(linkId).ocwMin = ocwMin;
+}
+
+void
+QosTxop::SetOcwMax(uint8_t ocwMax, uint8_t linkId)
+{
+    NS_LOG_FUNCTION(this << ocwMax << +linkId);
+    GetLink(linkId).ocwMax = ocwMax;
+}
+
+void
+QosTxop::UpdateOcwObo(uint8_t ocw, uint8_t obo, uint8_t linkId)
+{
+  NS_LOG_FUNCTION(this << ocw << obo << +linkId);
+  if (obo)
+    GetLink(linkId).m_obo = obo;
+  else {
+    Ptr<UniformRandomVariable> rv = CreateObject<UniformRandomVariable>();
+    GetLink(linkId).m_ocw = ocw;
+    GetLink(linkId).m_obo = static_cast<uint8_t>(rv->GetInteger(0, ocw));
+  }
+}
+
+void
 QosTxop::SetMuAifsn(uint8_t aifsn, uint8_t linkId)
 {
     NS_LOG_FUNCTION(this << +aifsn << +linkId);
@@ -255,6 +282,34 @@ QosTxop::GetAifsn(uint8_t linkId) const
         return GetLink(linkId).aifsn;
     }
     return GetLink(linkId).muAifsn;
+}
+
+uint8_t
+QosTxop::GetOcwMin(uint8_t linkId) const
+{
+   NS_LOG_FUNCTION(this << +linkId);
+   return GetLink(linkId).ocwMin;
+}
+
+uint8_t
+QosTxop::GetOcwMax(uint8_t linkId) const
+{
+  NS_LOG_FUNCTION(this << +linkId);
+  return GetLink(linkId).ocwMax;
+}
+
+uint8_t
+QosTxop::GetOcw(uint8_t linkId) const
+{
+  NS_LOG_FUNCTION(this << +linkId);
+  return GetLink(linkId).m_ocw;
+}
+
+uint8_t
+QosTxop::GetObo(uint8_t linkId) const
+{
+  NS_LOG_FUNCTION(this << +linkId);
+  return GetLink(linkId).m_obo;
 }
 
 Ptr<BlockAckManager>

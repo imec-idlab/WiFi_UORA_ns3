@@ -598,6 +598,19 @@ MgtProbeResponseHeader::SetMuEdcaParameterSet(MuEdcaParameterSet&& muEdcaParamet
 }
 
 void
+MgtProbeResponseHeader::SetUoraParameterSet(const UoraParameterSet& uoraParameters)
+{
+  m_uoraParameterSet = uoraParameters;
+}
+
+void
+MgtProbeResponseHeader::SetUoraParameterSet(UoraParameterSet&& uoraParameters)
+{
+  m_uoraParameterSet = std::move(uoraParameters);
+}
+
+
+void
 MgtProbeResponseHeader::SetReducedNeighborReport(const ReducedNeighborReport& reducedNeighborReport)
 {
     m_reducedNeighborReport = reducedNeighborReport;
@@ -631,6 +644,12 @@ const std::optional<MuEdcaParameterSet>&
 MgtProbeResponseHeader::GetMuEdcaParameterSet() const
 {
     return m_muEdcaParameterSet;
+}
+
+const std::optional<UoraParameterSet>&
+MgtProbeResponseHeader::GetUoraParameterSet() const
+{
+  return m_uoraParameterSet;
 }
 
 const std::optional<ReducedNeighborReport>&
@@ -1883,6 +1902,18 @@ MgtAssocResponseHeader::SetMuEdcaParameterSet(MuEdcaParameterSet&& muEdcaParamet
     m_muEdcaParameterSet = std::move(muEdcaParameters);
 }
 
+void
+MgtAssocResponseHeader::SetUoraParameterSet(const UoraParameterSet& uoraParameters)
+{
+  m_uoraParameterSet = uoraParameters;
+}
+
+void
+MgtAssocResponseHeader::SetUoraParameterSet(UoraParameterSet&& uoraParameters)
+{
+  m_uoraParameterSet = std::move(uoraParameters);
+}
+
 const std::optional<EdcaParameterSet>&
 MgtAssocResponseHeader::GetEdcaParameterSet() const
 {
@@ -1893,6 +1924,12 @@ const std::optional<MuEdcaParameterSet>&
 MgtAssocResponseHeader::GetMuEdcaParameterSet() const
 {
     return m_muEdcaParameterSet;
+}
+
+const std::optional<UoraParameterSet>&
+MgtAssocResponseHeader::GetUoraParameterSet() const
+{
+  return m_uoraParameterSet;
 }
 
 TypeId

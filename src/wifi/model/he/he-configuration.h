@@ -94,6 +94,8 @@ class HeConfiguration : public Object
     uint16_t m_muBkCwMax;      //!< CWmax for BK in MU EDCA Parameter Set
     uint16_t m_muViCwMax;      //!< CWmax for VI in MU EDCA Parameter Set
     uint16_t m_muVoCwMax;      //!< CWmax for VO in MU EDCA Parameter Set
+    uint8_t m_OCwMin;          //!< CWmin for UORA
+    uint8_t m_OCwMax;          //!<CWmax for UORA
     Time m_beMuEdcaTimer;      //!< Timer for BE in MU EDCA Parameter Set
     Time m_bkMuEdcaTimer;      //!< Timer for BK in MU EDCA Parameter Set
     Time m_viMuEdcaTimer;      //!< Timer for VI in MU EDCA Parameter Set

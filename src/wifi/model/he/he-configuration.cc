@@ -178,7 +178,17 @@ HeConfiguration::GetTypeId()
                           "0 can only be used if the MU EDCA Timer for all ACs is set to 0.",
                           TimeValue(MicroSeconds(0)),
                           MakeTimeAccessor(&HeConfiguration::m_voMuEdcaTimer),
-                          MakeTimeChecker(MicroSeconds(0), MicroSeconds(2088960)));
+                          MakeTimeChecker(MicroSeconds(0), MicroSeconds(2088960)))
+            .AddAttribute("OCwMin",
+                          "Minimum contention window (OCwMin) for UORA",
+                          UintegerValue(7),
+                          MakeUintegerAccessor(&HeConfiguration::m_OCwMin),
+                          MakeUintegerChecker<uint8_t>(0, 127))
+            .AddAttribute("OCwMax",
+                          "Maximum contention window (OCwMax) for UORA",
+                          UintegerValue(32),
+                          MakeUintegerAccessor(&HeConfiguration::m_OCwMax),
+                          MakeUintegerChecker<uint8_t>(0, 127));
     return tid;
 }
 
