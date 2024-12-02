@@ -1701,6 +1701,12 @@ WifiMac::GetHeCapabilities(uint8_t linkId) const
         capabilities.SetHeSuPpdu1xHeLtf800nsGi(true);
         capabilities.SetHePpdu4xHeLtf800nsGi(true);
     }
+    UintegerValue uintegerValue;
+    heConfiguration->GetAttribute("OCwMin", uintegerValue);
+    if (uintegerValue.Get())
+    {
+      capabilities.SetOfdmaRaSupport(true);
+    }
 
     uint32_t maxAmpduLength =
         std::max({m_voMaxAmpduSize, m_viMaxAmpduSize, m_beMaxAmpduSize, m_bkMaxAmpduSize});

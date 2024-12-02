@@ -174,6 +174,8 @@ class HeCapabilities : public WifiInformationElement
      */
     uint8_t GetHighestNssSupported() const;
 
+
+
     // MAC Capabilities Info fields
     /**
      * Set the maximum AMPDU length.
@@ -195,7 +197,19 @@ class HeCapabilities : public WifiInformationElement
      * \param nss the NSS
      */
     void SetHighestNssSupported(uint8_t nss);
+    /**
+     * Set UL OFDMA RA support
+     *
+     * \param ofdmaRa support
+     */
+    void SetOfdmaRaSupport(bool ofdmaRa);
 
+    /**
+     * Get UL OFDMA RA support
+     *
+     * \returns true if UL OFDMA RA is supported, false otherwise
+     */
+    bool GetOfdmaRaSupport() const;
     /**
      * Is RX MCS supported.
      *

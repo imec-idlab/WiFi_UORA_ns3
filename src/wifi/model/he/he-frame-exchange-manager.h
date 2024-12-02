@@ -330,7 +330,7 @@ class HeFrameExchangeManager : public VhtFrameExchangeManager
      * \param trigger the Basic or BSRP Trigger Frame content
      * \param hdr the MAC header of the Basic or BSRP Trigger Frame
      */
-    void SendQosNullFramesInTbPpdu(const CtrlTriggerHeader& trigger, const WifiMacHeader& hdr);
+    void SendQosNullFramesInTbPpdu(const CtrlTriggerHeader& trigger, const WifiMacHeader& hdr, bool isRandomAccess);
 
     Ptr<ApWifiMac> m_apMac;          //!< MAC pointer (null if not an AP)
     Ptr<StaWifiMac> m_staMac;        //!< MAC pointer (null if not a STA)

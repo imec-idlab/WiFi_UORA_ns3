@@ -31,7 +31,6 @@
 
 namespace ns3
 {
-
 class Packet;
 class ChannelAccessManager;
 class MacTxMiddle;
@@ -302,6 +301,8 @@ class Txop : public Object
      * \return the TXOP limit.
      */
     Time GetTxopLimit(uint8_t linkId) const;
+
+    Ptr<WifiMac> GetMac() const;
     /**
      * Update the value of the CW variable for the given link to take into account
      * a transmission success or a transmission abort (stop transmission

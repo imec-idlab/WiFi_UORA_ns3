@@ -407,14 +407,20 @@ class QosTxop : public Txop
      */
     void SetOcwMax(uint8_t ocwMax, uint8_t linkId);
     /**
-     * Update the O CW and OBO: If OBO is given, then only update that else use
+     * Update OBO: If OBO is given, then only update that else use
      * OCW to get a new OBO.
      *
-     * \param ocw the O contention window size.
      * \param OBO.
      * \param linkId the ID of the given link
      */
-    void UpdateOcwObo(uint8_t ocw, uint8_t obo, uint8_t linkId);
+    void UpdateObo(uint8_t obo, uint8_t linkId);
+    /**
+     * Update OCW upon failed transmission
+     *
+     * \param linkId the ID of the given link
+     */
+    void UpdateFailedOcw(uint8_t linkId);
+
     /**
      * For the given link, return the minimum contention window size from the
      * EDCA Parameter Set or the MU EDCA Parameter Set, depending on whether the

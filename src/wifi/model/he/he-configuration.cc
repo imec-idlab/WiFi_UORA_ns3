@@ -151,7 +151,7 @@ HeConfiguration::GetTypeId()
                           "0 can only be used if the MU EDCA Timer for all ACs is set to 0.",
                           TimeValue(MicroSeconds(0)),
                           MakeTimeAccessor(&HeConfiguration::m_beMuEdcaTimer),
-                          MakeTimeChecker(MicroSeconds(0), MicroSeconds(2088960)))
+                          MakeTimeChecker(MicroSeconds(0), Seconds(2088960)))
             .AddAttribute("BkMuEdcaTimer",
                           "The MU EDCA Timer used by BK EDCA. It must be a multiple of "
                           "8192 us and must be in the range from 8.192 ms to 2088.96 ms."
@@ -160,7 +160,7 @@ HeConfiguration::GetTypeId()
                           "0 can only be used if the MU EDCA Timer for all ACs is set to 0.",
                           TimeValue(MicroSeconds(0)),
                           MakeTimeAccessor(&HeConfiguration::m_bkMuEdcaTimer),
-                          MakeTimeChecker(MicroSeconds(0), MicroSeconds(2088960)))
+                          MakeTimeChecker(MicroSeconds(0), Seconds(2088960)))
             .AddAttribute("ViMuEdcaTimer",
                           "The MU EDCA Timer used by VI EDCA. It must be a multiple of "
                           "8192 us and must be in the range from 8.192 ms to 2088.96 ms."
@@ -169,7 +169,7 @@ HeConfiguration::GetTypeId()
                           "0 can only be used if the MU EDCA Timer for all ACs is set to 0.",
                           TimeValue(MicroSeconds(0)),
                           MakeTimeAccessor(&HeConfiguration::m_viMuEdcaTimer),
-                          MakeTimeChecker(MicroSeconds(0), MicroSeconds(2088960)))
+                          MakeTimeChecker(MicroSeconds(0), Seconds(2088960)))
             .AddAttribute("VoMuEdcaTimer",
                           "The MU EDCA Timer used by VO EDCA. It must be a multiple of "
                           "8192 us and must be in the range from 8.192 ms to 2088.96 ms."
@@ -178,7 +178,7 @@ HeConfiguration::GetTypeId()
                           "0 can only be used if the MU EDCA Timer for all ACs is set to 0.",
                           TimeValue(MicroSeconds(0)),
                           MakeTimeAccessor(&HeConfiguration::m_voMuEdcaTimer),
-                          MakeTimeChecker(MicroSeconds(0), MicroSeconds(2088960)))
+                          MakeTimeChecker(MicroSeconds(0), Seconds(2088960)))
             .AddAttribute("OCwMin",
                           "Minimum contention window (OCwMin) for UORA",
                           UintegerValue(7),

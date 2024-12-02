@@ -327,6 +327,7 @@ MultiUserScheduler::GetMaxSizeOfQosNullAmpdu(const CtrlTriggerHeader& trigger) c
     uint8_t maxNTids = 0;
     for (const auto& userInfo : trigger)
     {
+      if (userInfo.GetAid12()){ //not RaRUs
         auto address = m_apMac->GetMldOrLinkAddressByAid(userInfo.GetAid12());
         NS_ASSERT_MSG(address, "AID " << userInfo.GetAid12() << " not found");
 
@@ -339,6 +340,7 @@ MultiUserScheduler::GetMaxSizeOfQosNullAmpdu(const CtrlTriggerHeader& trigger) c
             }
         }
         maxNTids = std::max(maxNTids, staNTids);
+      }
     }
 
     // compute the size in bytes of maxNTids QoS Null frames

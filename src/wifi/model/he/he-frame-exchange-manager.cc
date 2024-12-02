@@ -62,7 +62,12 @@ HeFrameExchangeManager::GetTypeId()
     static TypeId tid = TypeId("ns3::HeFrameExchangeManager")
                             .SetParent<VhtFrameExchangeManager>()
                             .AddConstructor<HeFrameExchangeManager>()
-                            .SetGroupName("Wifi");
+                            .SetGroupName("Wifi")
+                            .AddAttribute("HeDisableEDCA",
+                                "Disable edca or not by starting MUEDCA timer after a successful EDCA transmission",
+                                BooleanValue(false),
+                                MakeBooleanAccessor(&HeFrameExchangeManager::val),
+                                MakeBooleanChecker());
     return tid;
 }
 
@@ -151,6 +156,11 @@ HeFrameExchangeManager::StartFrameExchange(Ptr<QosTxop> edca, Time availableTime
 
     MultiUserScheduler::TxFormat txFormat = MultiUserScheduler::SU_TX;
     Ptr<const WifiMpdu> mpdu;
+
+     if ( !m_mac->GetTypeOfStation() ) {
+    std::cout << "He at " << Simulator::Now().GetSeconds() <<" Type of stations is" << m_mac->GetTypeOfStation() << 
+      " address is"<< m_mac->GetAddress() << std::endl;
+  }
 
     /*
      * We consult the Multi-user Scheduler (if available) to know the type of transmission to make
@@ -707,9 +717,11 @@ HeFrameExchangeManager::SendPsduMap()
 
         for (const auto& userInfo : trigger)
         {
+          if (userInfo.GetAid12()){
             auto staIt = m_apMac->GetStaList(m_linkId).find(userInfo.GetAid12());
             NS_ASSERT(staIt != m_apMac->GetStaList(m_linkId).end());
             m_staExpectTbPpduFrom.insert(staIt->second);
+          }
         }
 
         timerType = WifiTxTimer::WAIT_QOS_NULL_AFTER_BSRP_TF;
@@ -1717,7 +1729,6 @@ HeFrameExchangeManager::ReceiveBasicTrigger(CtrlTriggerHeader& trigger,
 
     NS_LOG_DEBUG("Received a Trigger Frame (basic variant) soliciting a transmission");
 
-    //Simple version of UORA: just select random RU from available RUs with AID 0
     if (isRandomAccess)
     {
         std::vector<uint16_t> raRus;
@@ -1732,8 +1743,10 @@ HeFrameExchangeManager::ReceiveBasicTrigger(CtrlTriggerHeader& trigger,
             }
             idx++;
         }
+        AcIndex preferredAc = trigger.FindUserInfoWithAid(0)->GetPreferredAc();
+        auto acIt = wifiAcList.find(preferredAc);
 
-        Ptr<QosTxop> edca = m_staMac->GetQosTxop(trigger.FindUserInfoWithAid(m_staMac->GetAssociationId())->GetPreferredAc());
+        Ptr<QosTxop> edca = m_staMac->GetQosTxop(acIt->first);
         uint8_t obo = edca->GetObo(m_linkId) - raRus.size();
         if (!obo){
         //Change trigger: for randomly selected RA RU set AID to the STA AID
@@ -1744,7 +1757,8 @@ HeFrameExchangeManager::ReceiveBasicTrigger(CtrlTriggerHeader& trigger,
           selectedRuIt->SetAid12 (m_staMac->GetAssociationId());
         }
         else {
-          edca->UpdateOcwObo(0, obo, m_linkId);
+          edca->UpdateObo(obo, m_linkId);
+          return;
         }
     }
 
@@ -1837,7 +1851,7 @@ HeFrameExchangeManager::ReceiveBasicTrigger(CtrlTriggerHeader& trigger,
     else if (!isRandomAccess)
     {
         // send QoS Null frames
-        SendQosNullFramesInTbPpdu(trigger, hdr);
+        SendQosNullFramesInTbPpdu(trigger, hdr, false);
     }
     else
     {
@@ -1847,7 +1861,7 @@ HeFrameExchangeManager::ReceiveBasicTrigger(CtrlTriggerHeader& trigger,
 
 void
 HeFrameExchangeManager::SendQosNullFramesInTbPpdu(const CtrlTriggerHeader& trigger,
-                                                  const WifiMacHeader& hdr)
+                                                  const WifiMacHeader& hdr, bool isRandomAccess)
 {
     NS_LOG_FUNCTION(this << trigger << hdr);
     NS_ASSERT(trigger.IsBasic() || trigger.IsBsrp());
@@ -1858,6 +1872,39 @@ HeFrameExchangeManager::SendQosNullFramesInTbPpdu(const CtrlTriggerHeader& trigg
     if (!UlMuCsMediumIdle(trigger))
     {
         return;
+    }
+
+     if (isRandomAccess)
+    {
+        std::vector<uint16_t> raRus;
+
+        uint16_t idx = 0;
+        for (CtrlTriggerHeader::ConstIterator userInfoIt = trigger.begin (); userInfoIt != trigger.end(); userInfoIt++)
+        {
+            uint16_t staId = userInfoIt->GetAid12 ();
+            if (!staId) //RA RU
+            {
+                raRus.push_back (idx);
+            }
+            idx++;
+        }
+        AcIndex preferredAc = trigger.FindUserInfoWithAid(0)->GetPreferredAc();
+        auto acIt = wifiAcList.find(preferredAc);
+
+        Ptr<QosTxop> edca = m_staMac->GetQosTxop(acIt->first);
+        uint8_t obo = edca->GetObo(m_linkId) - raRus.size();
+        if (!obo){
+        //Change trigger: for randomly selected RA RU set AID to the STA AID
+          Ptr<UniformRandomVariable> rv = CreateObject<UniformRandomVariable> ();
+          uint16_t selectedRu = raRus.at(rv->GetValue(0, raRus.size()));
+          CtrlTriggerHeader::Iterator selectedRuIt = trigger.begin ();
+          std::advance(selectedRuIt, selectedRu);
+          selectedRuIt->SetAid12 (m_staMac->GetAssociationId());
+        }
+        else {
+          edca->UpdateObo(obo, m_linkId);
+          return;
+        }
     }
 
     WifiMacHeader header;
@@ -2272,6 +2319,7 @@ HeFrameExchangeManager::ReceiveMpdu(Ptr<const WifiMpdu> mpdu,
         // Schedule the transmission of a Multi-STA BlockAck frame if needed
         if (!acknowledgment->stationsReceivingMultiStaBa.empty() && !m_multiStaBaEvent.IsRunning())
         {
+          //std::cout <<"called from here Second"<<std::endl;
             m_multiStaBaEvent = Simulator::Schedule(m_phy->GetSifs(),
                                                     &HeFrameExchangeManager::SendMultiStaBlockAck,
                                                     this,
@@ -2754,6 +2802,7 @@ HeFrameExchangeManager::EndReceiveAmpdu(Ptr<const WifiPsdu> psdu,
         // Schedule the transmission of a Multi-STA BlockAck frame if needed
         if (!acknowledgment->stationsReceivingMultiStaBa.empty() && !m_multiStaBaEvent.IsRunning())
         {
+          std::cout <<"called from here "<<std::endl;
             m_multiStaBaEvent = Simulator::Schedule(m_phy->GetSifs(),
                                                     &HeFrameExchangeManager::SendMultiStaBlockAck,
                                                     this,

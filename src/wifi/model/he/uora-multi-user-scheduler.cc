@@ -157,6 +157,7 @@ UoraMultiUserScheduler::DoDispose()
     m_staListUl.clear();
     m_candidates.clear();
     m_txParams.Clear();
+    m_staListToPoll.clear();
     m_apMac->TraceDisconnectWithoutContext(
         "AssociatedSta",
         MakeCallback(&UoraMultiUserScheduler::NotifyStationAssociated, this));
@@ -200,6 +201,30 @@ UoraMultiUserScheduler::SelectTxFormat()
     return TrySendingDlMuPpdu();
 }
 
+void UoraMultiUserScheduler::UpdatePollList(Mac48Address address)
+{
+  NS_LOG_FUNCTION(this);
+
+  auto it = std::find_if( m_staListUl.begin(), m_staListUl.end(),
+      [address](auto s){ return s.address == address;});
+
+  if (it != m_staListUl.end() ){
+    auto b = std::find_if(m_staListToPoll.begin(), m_staListToPoll.end(), [address](auto s){
+        return address == s.address;
+        });
+    if (b == m_staListToPoll.end())
+        {
+          it->initCredit = Simulator::Now().ToDouble(Time::US);
+          it->credits = m_staListToPoll.front().credits;
+          m_staListToPoll.emplace_front(*it);
+        }
+    else {
+      it->initCredit = Simulator::Now().ToDouble(Time::US);
+    }
+
+  }
+}
+
 template <class Func>
 WifiTxVector
 UoraMultiUserScheduler::GetTxVectorForUlMu(Func canbeSolicited, bool isBasicTrigger)
@@ -207,7 +232,7 @@ UoraMultiUserScheduler::GetTxVectorForUlMu(Func canbeSolicited, bool isBasicTrig
     NS_LOG_FUNCTION(this);
 
     // determine RUs to allocate to stations
-    auto count = std::min<std::size_t>(m_nStations, m_staListUl.size());
+    auto count = std::min<std::size_t>(m_nStations, m_staListToPoll.size());
     std::size_t nCentral26TonesRus;
     if (m_ruAllocationType == HeRu::RU_UNDEFINED)
     {
@@ -235,10 +260,10 @@ UoraMultiUserScheduler::GetTxVectorForUlMu(Func canbeSolicited, bool isBasicTrig
     txVector.SetBssColor(heConfiguration->GetBssColor());
 
     // iterate over the associated stations until an enough number of stations is identified
-    auto staIt = m_staListUl.begin();
+    auto staIt = m_staListToPoll.begin();
     m_candidates.clear();
 
-    while (staIt != m_staListUl.end() &&
+    while (staIt != m_staListToPoll.end() &&
            txVector.GetHeMuUserInfoMap().size() <
                std::min<std::size_t>(m_nStations, count + nCentral26TonesRus))
     {
@@ -247,6 +272,10 @@ UoraMultiUserScheduler::GetTxVectorForUlMu(Func canbeSolicited, bool isBasicTrig
         if (!canbeSolicited(*staIt))
         {
             NS_LOG_DEBUG("Skipping station based on provided function object");
+            if ( staIt->initCredit + m_maxCredits.ToDouble(Time::US) <= Simulator::Now().ToDouble(Time::US)){
+              staIt = m_staListToPoll.erase(staIt);
+              continue;
+            }
             staIt++;
             continue;
         }
@@ -310,11 +339,11 @@ UoraMultiUserScheduler::GetTxVectorForUlMu(Func canbeSolicited, bool isBasicTrig
 
     if (txVector.GetHeMuUserInfoMap().empty())
     {
-      for (size_t i = 0; i < std::min<std::size_t>(m_nStations, count + nCentral26TonesRus); i++)
+      /*for (size_t i = 0; i < std::min<std::size_t>(m_nStations, count + nCentral26TonesRus); i++)
       {
         auto it = std::next(m_staListUl.begin(), i);
         std::rotate (it, std::next(it), m_staListUl.end() );
-      }
+      }*/
 
       NS_LOG_DEBUG("No suitable station");
       return txVector;
@@ -569,7 +598,7 @@ UoraMultiUserScheduler::TrySendingBasicTf()
         userInfo.SetBasicTriggerDepUserInfo(0, 0, m_edca->GetAccessCategory());
     }
 
-    UpdateCredits(m_staListUl, maxDuration, txVector);
+    UpdateCredits(m_staListToPoll, maxDuration, txVector);
 
     return UL_MU_TX;
 }
@@ -960,17 +989,22 @@ UoraMultiUserScheduler::UpdateCredits(std::list<MasterInfo>& staList,
 
         candidate.first->credits -= debitsPerMhz * HeRu::GetBandwidth(mapIt->second.ru.GetRuType());
         creditsSub[candidate.first->aid] = debitsPerMhz * HeRu::GetBandwidth(mapIt->second.ru.GetRuType());
+        candidate.first->initCredit = Simulator::Now().ToDouble(Time::US);
     }
 
     // assign credits to all stations
     for (auto& sta : staList)
     {
         sta.credits += creditsPerSta - creditsSub[sta.aid];
-        sta.credits = std::min(sta.credits, m_maxCredits.ToDouble(Time::US));
+        sta.credits = std::min(sta.credits, Seconds(1).ToDouble(Time::US));
     }
 
-    // sort the list in decreasing order of credits
-    staList.sort([](const MasterInfo& a, const MasterInfo& b) { return a.credits > b.credits; });
+    // sort the list in ascending order of credits -- priotizing those that are
+    // transmitting
+    staList.sort([](const MasterInfo& a, const MasterInfo& b) { return a.credits < b.credits; });
+
+    staList.remove_if([&](const MasterInfo& a) { return a.initCredit + m_maxCredits.ToDouble(Time::US) <= Simulator::Now().ToDouble(Time::US); });
+
 }
 
 MultiUserScheduler::DlMuInfo
@@ -1069,7 +1103,5 @@ UoraMultiUserScheduler::ComputeUlMuInfo()
     return UlMuInfo{m_trigger, m_triggerMacHdr, std::move(m_txParams)};
 }
 
-void
-UoraMultiUserScheduler::UpdatePollList(Mac48Address address){}
 
 } // namespace ns3

@@ -1483,7 +1483,7 @@ void
 StaWifiMac::SetOcwObo(AcIndex ac)
 {
     Ptr<QosTxop> edca = GetQosTxop(ac);
-    edca->UpdateOcwObo(edca->GetOcwMin(SINGLE_LINK_OP_ID), 0, SINGLE_LINK_OP_ID);
+    edca->UpdateObo(false, SINGLE_LINK_OP_ID);
 }
 
 void

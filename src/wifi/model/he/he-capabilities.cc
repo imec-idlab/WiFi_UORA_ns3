@@ -567,6 +567,13 @@ HeCapabilities::SetHighestNssSupported(uint8_t nss)
     m_highestNssSupportedM1 = nss - 1;
 }
 
+void
+HeCapabilities::SetOfdmaRaSupport(bool ofdmaRa)
+{
+    m_ofdmaRaSupport = (ofdmaRa ? 1 : 0);
+}
+
+
 uint8_t
 HeCapabilities::GetChannelWidthSet() const
 {
@@ -608,6 +615,13 @@ HeCapabilities::GetMaxAmpduLength() const
 {
     return std::min<uint32_t>((1UL << (20 + m_maxAmpduLengthExponent)) - 1, 6500631);
 }
+
+bool
+HeCapabilities::GetOfdmaRaSupport() const
+{
+    return (m_ofdmaRaSupport == 1);
+}
+
 
 std::ostream&
 operator<<(std::ostream& os, const HeCapabilities& heCapabilities)

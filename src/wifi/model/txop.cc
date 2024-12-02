@@ -223,6 +223,13 @@ Txop::GetWifiMacQueue() const
     return m_queue;
 }
 
+Ptr<WifiMac> 
+Txop::GetMac() const
+{
+  return m_mac;
+}
+
+
 void
 Txop::SetMinCw(uint32_t minCw)
 {
@@ -345,6 +352,10 @@ Txop::StartBackoffNow(uint32_t nSlots, uint8_t linkId)
     {
         NS_LOG_DEBUG("start backoff=" << nSlots << " slots");
     }
+    if (link.backoffStart >= Time(1.40268e+13))
+      NS_ASSERT(0);
+    if (!m_mac->GetTypeOfStation())
+      std::cout << "link.backoffStart " << link.backoffStart <<std::endl;
     link.backoffSlots = nSlots;
     link.backoffStart = Simulator::Now();
 }
@@ -522,6 +533,9 @@ Txop::Queue(Ptr<WifiMpdu> mpdu)
     {
         if (m_mac->GetChannelAccessManager(linkId)->NeedBackoffUponAccess(this))
         {
+          if (!m_mac->GetTypeOfStation())
+          std::cout << "TX::QUEUE GetLink(linkId).backoffStart" <<GetLink(linkId).backoffStart << 
+      " address is"<< m_mac->GetAddress() << std::endl;
             GenerateBackoff(linkId);
         }
     }
@@ -544,8 +558,12 @@ void
 Txop::StartAccessIfNeeded(uint8_t linkId)
 {
     NS_LOG_FUNCTION(this << +linkId);
-    if (HasFramesToTransmit(linkId) && GetLink(linkId).access == NOT_REQUESTED)
+    if (HasFramesToTransmit(linkId) && GetLink(linkId).access == NOT_REQUESTED && 
+        GetLink(linkId).backoffStart <= Simulator::Now())
     {
+      if (!m_mac->GetTypeOfStation())
+          std::cout << "Txop::StartAccessIfNeeded GetLink(linkId).backoffStart" <<GetLink(linkId).backoffStart << 
+      " address is"<< m_mac->GetAddress() << std::endl;
         m_mac->GetChannelAccessManager(linkId)->RequestAccess(this);
     }
 }
@@ -586,7 +604,9 @@ Txop::NotifyChannelReleased(uint8_t linkId)
 {
     NS_LOG_FUNCTION(this << +linkId);
     GetLink(linkId).access = NOT_REQUESTED;
-    GenerateBackoff(linkId);
+    //Only generate backoff when EDCA is not disabled.
+    if (GetLink(linkId).backoffStart <= Simulator::Now()){GenerateBackoff(linkId);}
+
     if (HasFramesToTransmit(linkId))
     {
         Simulator::ScheduleNow(&Txop::RequestAccess, this, linkId);
@@ -596,6 +616,10 @@ Txop::NotifyChannelReleased(uint8_t linkId)
 void
 Txop::RequestAccess(uint8_t linkId)
 {
+  if ( !m_mac->GetTypeOfStation() ) {
+    std::cout << "Type of stations is" << m_mac->GetTypeOfStation() << 
+      " address is"<< m_mac->GetAddress() << std::endl;
+  }
     NS_LOG_FUNCTION(this << +linkId);
     if (GetLink(linkId).access == NOT_REQUESTED)
     {
@@ -609,6 +633,7 @@ Txop::GenerateBackoff(uint8_t linkId)
     NS_LOG_FUNCTION(this << +linkId);
     uint32_t backoff = m_rng->GetInteger(0, GetCw(linkId));
     m_backoffTrace(backoff, linkId);
+    auto link = GetLink(linkId);
     StartBackoffNow(backoff, linkId);
 }
 

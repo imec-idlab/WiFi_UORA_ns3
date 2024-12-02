@@ -741,6 +741,10 @@ MgtProbeResponseHeader::GetSerializedSize() const
     {
         size += m_muEdcaParameterSet->GetSerializedSize();
     }
+    if (m_uoraParameterSet.has_value())
+    {
+      size += m_uoraParameterSet->GetSerializedSize();
+    }
     if (m_multiLinkElement.has_value())
     {
         size += m_multiLinkElement->GetSerializedSize();
@@ -864,6 +868,10 @@ MgtProbeResponseHeader::Serialize(Buffer::Iterator start) const
     {
         i = m_muEdcaParameterSet->Serialize(i);
     }
+    if (m_uoraParameterSet.has_value())
+    {
+      i = m_uoraParameterSet->Serialize(i);
+    }
     if (m_multiLinkElement.has_value())
     {
         i = m_multiLinkElement->Serialize(i);
@@ -902,6 +910,7 @@ MgtProbeResponseHeader::Deserialize(Buffer::Iterator start)
     i = WifiInformationElement::DeserializeIfPresent(m_heCapability, i);
     i = WifiInformationElement::DeserializeIfPresent(m_heOperation, i);
     i = WifiInformationElement::DeserializeIfPresent(m_muEdcaParameterSet, i);
+    i = WifiInformationElement::DeserializeIfPresent(m_uoraParameterSet, i);
     i = WifiInformationElement::DeserializeIfPresent(m_multiLinkElement, i, WIFI_MAC_MGT_BEACON);
     const bool is2_4Ghz = m_rates.IsSupportedRate(
         1000000 /* 1 Mbit/s */); // TODO: use presence of VHT capabilities IE and HE 6 GHz Band
@@ -2000,6 +2009,10 @@ MgtAssocResponseHeader::GetSerializedSize() const
     {
         size += m_muEdcaParameterSet->GetSerializedSize();
     }
+    if (m_uoraParameterSet.has_value())
+    {
+        size += m_uoraParameterSet->GetSerializedSize();
+    }
     if (m_multiLinkElement.has_value())
     {
         size += m_multiLinkElement->GetSerializedSize();
@@ -2115,6 +2128,10 @@ MgtAssocResponseHeader::Serialize(Buffer::Iterator start) const
     {
         i = m_muEdcaParameterSet->Serialize(i);
     }
+    if (m_uoraParameterSet.has_value())
+    {
+        i = m_uoraParameterSet->Serialize(i);
+    }
     if (m_multiLinkElement.has_value())
     {
         i = m_multiLinkElement->Serialize(i);
@@ -2149,6 +2166,7 @@ MgtAssocResponseHeader::Deserialize(Buffer::Iterator start)
     i = WifiInformationElement::DeserializeIfPresent(m_heCapability, i);
     i = WifiInformationElement::DeserializeIfPresent(m_heOperation, i);
     i = WifiInformationElement::DeserializeIfPresent(m_muEdcaParameterSet, i);
+    i = WifiInformationElement::DeserializeIfPresent(m_uoraParameterSet, i);
     i = WifiInformationElement::DeserializeIfPresent(m_multiLinkElement,
                                                      i,
                                                      WIFI_MAC_MGT_ASSOCIATION_RESPONSE);

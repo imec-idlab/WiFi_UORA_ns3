@@ -198,16 +198,29 @@ QosTxop::SetOcwMax(uint8_t ocwMax, uint8_t linkId)
 }
 
 void
-QosTxop::UpdateOcwObo(uint8_t ocw, uint8_t obo, uint8_t linkId)
+QosTxop::UpdateObo(uint8_t obo, uint8_t linkId)
 {
-  NS_LOG_FUNCTION(this << ocw << obo << +linkId);
+  NS_LOG_FUNCTION(this << obo << +linkId);
+  auto& link = GetLink(linkId);
   if (obo)
-    GetLink(linkId).m_obo = obo;
-  else {
+    link.m_obo = obo;
+  else { //successful transmission
     Ptr<UniformRandomVariable> rv = CreateObject<UniformRandomVariable>();
-    GetLink(linkId).m_ocw = ocw;
-    GetLink(linkId).m_obo = static_cast<uint8_t>(rv->GetInteger(0, ocw));
+    link.m_obo = static_cast<uint8_t>(rv->GetInteger(0, link.m_ocw));
   }
+}
+
+void 
+QosTxop::UpdateFailedOcw(uint8_t linkId)
+{
+  NS_LOG_FUNCTION(this << +linkId);
+
+  auto& link = GetLink(linkId);
+  uint8_t oCwMax = GetOcwMax(linkId);
+  uint8_t dOcw = 2 * (link.m_ocw + 1) -1;
+
+  link.m_ocw = ( dOcw < oCwMax ) ? dOcw : oCwMax;
+  UpdateObo(false, linkId);
 }
 
 void
@@ -232,6 +245,8 @@ QosTxop::StartMuEdcaTimerNow(uint8_t linkId)
     link.muEdcaTimerStartTime = Simulator::Now();
     if (EdcaDisabled(linkId))
     {
+      link.muEdcaTimer = MicroSeconds (link.muEdcaTimer.GetMicroSeconds() * 8192 );
+      std::cout <<"Disable EDCA for " << link.muEdcaTimer.As(Time::MS) <<"link ID " << +linkId <<std::endl;
         NS_LOG_DEBUG("Disable EDCA for " << link.muEdcaTimer.As(Time::MS));
         m_mac->GetChannelAccessManager(linkId)->DisableEdcaFor(this, link.muEdcaTimer);
     }
