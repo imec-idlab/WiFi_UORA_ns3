@@ -314,8 +314,6 @@ ChannelAccessManager::NeedBackoffUponAccess(Ptr<Txop> txop)
             // the backoff start time kept by the EDCAF to the current time in order
             // to correctly align the backoff start time at the next slot boundary
             // (performed by the next call to ChannelAccessManager::RequestAccess())
-          if (!txop->GetMac()->GetTypeOfStation())
-          std::cout <<"NeedBackoffUponAccess: value "<< txop->GetBackoffStart(m_linkId) <<std::endl;
             Time delay =
                 (txop->IsQosTxop() ? Seconds(0) : GetSifs() + txop->GetAifsn(m_linkId) * GetSlot());
             txop->UpdateBackoffSlotsNow(0, Simulator::Now() + delay, m_linkId);
@@ -354,8 +352,6 @@ ChannelAccessManager::RequestAccess(Ptr<Txop> txop)
         // next slot boundary.
         Time diff = txop->GetBackoffStart(m_linkId) - accessGrantStart;
         uint32_t nIntSlots = (diff / GetSlot()).GetHigh() + 1;
-       if (!txop->GetMac()->GetTypeOfStation() && txop->GetBackoffStart(m_linkId) > Simulator::Now())
-          std::cout <<"RequestAccess" <<std::endl; 
         txop->UpdateBackoffSlotsNow(0, accessGrantStart + (nIntSlots * GetSlot()), m_linkId);
     }
 
@@ -530,10 +526,6 @@ ChannelAccessManager::UpdateBackoff()
     for (auto txop : m_txops)
     {
         Time backoffStart = GetBackoffStartFor(txop);
-       /* if (!txop->GetMac()->GetTypeOfStation() ){
-          std::cout <<"UpdateBackoff " << backoffStart<<std::endl;
-        }*/
-
         if (backoffStart <= Simulator::Now())
         {
             uint32_t nIntSlots = ((Simulator::Now() - backoffStart) / GetSlot()).GetHigh();
@@ -555,8 +547,6 @@ ChannelAccessManager::UpdateBackoff()
             uint32_t n = std::min(nIntSlots, txop->GetBackoffSlots(m_linkId));
             NS_LOG_DEBUG("dcf " << k << " dec backoff slots=" << n);
             Time backoffUpdateBound = backoffStart + (n * GetSlot());
-            /*if (!txop->GetMac()->GetTypeOfStation())
-          std::cout <<"UpdateBackoff 2" <<std::endl; */
             txop->UpdateBackoffSlotsNow(n, backoffUpdateBound, m_linkId);
         }
         ++k;
@@ -575,19 +565,11 @@ ChannelAccessManager::DoRestartAccessTimeoutIfNeeded()
     Time expectedBackoffEnd = Simulator::GetMaximumSimulationTime();
     for (auto txop : m_txops)
     {
-      /*if ( !txop->GetMac()->GetTypeOfStation() ) {
-    std::cout << "Ch:Dore at " << Simulator::Now().GetSeconds() <<" Type of stations is " << txop->GetMac()->GetTypeOfStation() << 
-      " address is"<< txop->GetMac()->GetAddress() << std::endl;
-  }*/
-
         if (txop->GetAccessStatus(m_linkId) == Txop::REQUESTED)
         {
             Time tmp = GetBackoffEndFor(txop);
             if (tmp > Simulator::Now())
             {
-              if ( !txop->GetMac()->GetTypeOfStation() )
-              std::cout << "Ch:Dore 2 at " << Simulator::Now().GetSeconds() <<" Type of stations is " << txop->GetMac()->GetTypeOfStation() << 
-      " address is"<< txop->GetMac()->GetAddress() << std::endl;
                 accessTimeoutNeeded = true;
                 expectedBackoffEnd = std::min(expectedBackoffEnd, tmp);
             }
@@ -680,10 +662,6 @@ ChannelAccessManager::DisableEdcaFor(Ptr<Txop> qosTxop, Time duration)
     NS_LOG_DEBUG("Backoff will resume at time " << resume << " with "
                                                 << qosTxop->GetBackoffSlots(m_linkId)
                                                 << " remaining slot(s)");
-    std::cout <<"Backoff will resume at time " << resume << " with "
-                                                << qosTxop->GetBackoffSlots(m_linkId)
-                                                << " remaining slot(s)" <<"link ID " << +m_linkId 
-                                                <<"address "<<qosTxop->GetMac()->GetAddress() <<std::endl;
     qosTxop->UpdateBackoffSlotsNow(0, resume, m_linkId);
     DoRestartAccessTimeoutIfNeeded();
 }
@@ -799,8 +777,6 @@ ChannelAccessManager::NotifySwitchingStartNow(Time duration)
         uint32_t remainingSlots = txop->GetBackoffSlots(m_linkId);
         if (remainingSlots > 0)
         {
-          if (!txop->GetMac()->GetTypeOfStation())
-          std::cout <<"NotifySwitchingStartNow" <<std::endl;
             txop->UpdateBackoffSlotsNow(remainingSlots, now, m_linkId);
             NS_ASSERT(txop->GetBackoffSlots(m_linkId) == 0);
         }
@@ -858,8 +834,6 @@ ChannelAccessManager::NotifyWakeupNow()
         uint32_t remainingSlots = txop->GetBackoffSlots(m_linkId);
         if (remainingSlots > 0)
         {
-          if (!txop->GetMac()->GetTypeOfStation())
-          std::cout <<"NotifyWakeupNow" <<std::endl;
             txop->UpdateBackoffSlotsNow(remainingSlots, Simulator::Now(), m_linkId);
             NS_ASSERT(txop->GetBackoffSlots(m_linkId) == 0);
         }
@@ -879,8 +853,6 @@ ChannelAccessManager::NotifyOnNow()
         uint32_t remainingSlots = txop->GetBackoffSlots(m_linkId);
         if (remainingSlots > 0)
         {
-          if (!txop->GetMac()->GetTypeOfStation())
-          std::cout <<"NotifyOnNow" <<std::endl;
             txop->UpdateBackoffSlotsNow(remainingSlots, Simulator::Now(), m_linkId);
             NS_ASSERT(txop->GetBackoffSlots(m_linkId) == 0);
         }

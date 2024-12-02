@@ -279,12 +279,7 @@ QosFrameExchangeManager::StartFrameExchange(Ptr<QosTxop> edca,
         NS_LOG_DEBUG("Queue empty");
         return false;
     }
-    if ( !m_mac->GetTypeOfStation() ) {
-    std::cout << "Qos at " << Simulator::Now().GetSeconds() <<" Type of stations is" << m_mac->GetTypeOfStation() << 
-      " address is"<< m_mac->GetAddress() << std::endl;
-  }
-
-
+    
     mpdu = CreateAliasIfNeeded(mpdu);
     WifiTxParameters txParams;
     txParams.m_txVector =

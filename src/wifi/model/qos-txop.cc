@@ -246,7 +246,6 @@ QosTxop::StartMuEdcaTimerNow(uint8_t linkId)
     if (EdcaDisabled(linkId))
     {
       link.muEdcaTimer = MicroSeconds (link.muEdcaTimer.GetMicroSeconds() * 8192 );
-      std::cout <<"Disable EDCA for " << link.muEdcaTimer.As(Time::MS) <<"link ID " << +linkId <<std::endl;
         NS_LOG_DEBUG("Disable EDCA for " << link.muEdcaTimer.As(Time::MS));
         m_mac->GetChannelAccessManager(linkId)->DisableEdcaFor(this, link.muEdcaTimer);
     }
