@@ -100,7 +100,10 @@ void RxTraceWithAddress ( Ptr<const Packet> p, const Address &src, const Address
 
 int main(int argc, char *argv[])
 {
-  //LogComponentEnable("WifiMac", LOG_LEVEL_INFO);
+  //LogComponentEnable("WifiPhy", LOG_LEVEL_DEBUG);
+  //LogComponentEnable("WifiPhyStateHelper", LOG_LEVEL_DEBUG);
+  //LogComponentEnable("WifiMac", LOG_LEVEL_DEBUG);
+  //LogComponentEnable("ApWifiMac", LOG_LEVEL_DEBUG);
   //LogComponentEnable("WifiDefaultAckManager", LOG_LEVEL_DEBUG);
   //LogComponentEnable("HeFrameExchangeManager", LOG_LEVEL_DEBUG);
   //LogComponentEnable("BlockAckManager", LOG_LEVEL_DEBUG);
@@ -461,11 +464,14 @@ int main(int argc, char *argv[])
         wifimac.SetType ("ns3::ApWifiMac",
                   "EnableBeaconJitter", BooleanValue (false),
                   "Ssid", SsidValue (ssid),
-                  "VO_BlockAckThreshold", UintegerValue(0));
+                  "VO_BlockAckThreshold", UintegerValue(0),
+                  "BeaconGeneration", BooleanValue(true),
+                  "BsrLifetime", TimeValue(MilliSeconds(20)),
+                  "BeaconInterval", TimeValue(MicroSeconds(102400)));
 
       apNetDevice = wifi.Install (phy, wifimac, wifiApNode);
-      phy.EnablePcap("wifi-ax-uora-ap", apNetDevice); // enable pcap tracing
-      phy.EnablePcap("wifi-ax-uora-sta", staNetDevices);
+      //phy.EnablePcap("wifi-ax-uora-ap", apNetDevice); // enable pcap tracing
+      //phy.EnablePcap("wifi-ax-uora-sta", staNetDevices);
     }
   else
     {
@@ -504,7 +510,7 @@ int main(int argc, char *argv[])
 
   for (size_t i = 0; i < totalNStations; i++)
   {
-    staStartTime += 0.00208;
+    staStartTime += 0.00108;
     //InetSocketAddress remoteAddress = InetSocketAddress (serverInterfaces.GetAddress (i), port);
     //remoteAddress.SetTos (0xc0);
     UdpClientHelper staUdpClient (localAddress);

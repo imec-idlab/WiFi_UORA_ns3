@@ -763,7 +763,7 @@ HeFrameExchangeManager::SendPsduMap()
         NS_ASSERT(m_psduMap.size() == 1);
         timerType = WifiTxTimer::WAIT_BLOCK_ACK_AFTER_TB_PPDU;
         for (auto psdu : m_psduMap){
-          if (m_txParams.m_txVector.GetRu(m_staMac->GetAssociationId()).IsRandomAccess()) m_raAck = true;
+          if (m_txParams.m_txVector.GetRu(m_staMac->GetAssociationId()).IsRandomAccess()) {m_raAck = true;}
         }
         NS_ASSERT(m_staMac && m_staMac->IsAssociated());
         txVector = GetWifiRemoteStationManager()->GetBlockAckTxVector(
@@ -2483,22 +2483,26 @@ HeFrameExchangeManager::ReceiveMpdu(Ptr<const WifiMpdu> mpdu,
                 return;
             }
         }
-        uint8_t tid = hdr.GetQosTid();
-        GetBaManager(tid)->NotifyGotMpdu(mpdu);
 
-        // Acknowledgment context of Multi-STA Block Acks
-        acknowledgment->stationsReceivingMultiStaBa.emplace(std::make_pair(sender, tid), index);
-        acknowledgment->baType.m_bitmapLen.push_back(0);
-        uint16_t staId = txVector.GetHeMuUserInfoMap().begin()->first;
-        m_muSnrTag.Set(staId, rxSignalInfo.snr);
-
-        if (!acknowledgment->stationsReceivingMultiStaBa.empty() && !m_multiStaBaEvent.IsRunning())
+        if(hdr.GetQosAckPolicy() == WifiMacHeader::NORMAL_ACK)
         {
-            m_multiStaBaEvent = Simulator::Schedule(m_phy->GetSifs(),
+          uint8_t tid = hdr.GetQosTid();
+          GetBaManager(tid)->NotifyGotMpdu(mpdu);
+
+          // Acknowledgment context of Multi-STA Block Acks
+          acknowledgment->stationsReceivingMultiStaBa.emplace(std::make_pair(sender, tid), index);
+          acknowledgment->baType.m_bitmapLen.push_back(0);
+          uint16_t staId = txVector.GetHeMuUserInfoMap().begin()->first;
+          m_muSnrTag.Set(staId, rxSignalInfo.snr);
+
+          if (!acknowledgment->stationsReceivingMultiStaBa.empty() && !m_multiStaBaEvent.IsRunning())
+          {
+              m_multiStaBaEvent = Simulator::Schedule(m_phy->GetSifs(),
                                                     &HeFrameExchangeManager::SendMultiStaBlockAck,
                                                     this,
                                                     std::cref(m_txParams),
                                                     mpdu->GetHeader().GetDuration());
+          }
         }
 
         if (!(isRandomAccess) && m_staExpectTbPpduFrom.find(sender) == m_staExpectTbPpduFrom.end())
@@ -2523,10 +2527,13 @@ HeFrameExchangeManager::ReceiveMpdu(Ptr<const WifiMpdu> mpdu,
             m_txTimer.Cancel();
             m_channelAccessManager->NotifyAckTimeoutResetNow();
 
-            NS_ASSERT(m_edca);
-            m_psduMap.clear();
-            m_edca->ResetCw(m_linkId);
-            TransmissionSucceeded();
+            if (!m_multiStaBaEvent.IsRunning())
+            {
+              NS_ASSERT(m_edca);
+              m_psduMap.clear();
+              m_edca->ResetCw(m_linkId);
+              TransmissionSucceeded();
+            }
         }
 
         // the received TB PPDU has been processed
@@ -2738,9 +2745,17 @@ HeFrameExchangeManager::ReceiveMpdu(Ptr<const WifiMpdu> mpdu,
                     // transmitted in response to a Basic Trigger Frame and at least one
                     // MPDU was acknowledged. Therefore, it needs to update the access
                     // parameters if it received an MU EDCA Parameter Set element.
-                    if (m_psduMap.at(staId)->GetHeader(0).HasData())
+                    if (m_psduMap.at(staId)->GetHeader(0).HasData() && m_raAck)
+                    {
                       m_mac->GetQosTxop(tid)->StartMuEdcaTimerNow(m_linkId);
-                    else{
+                      m_mac->GetQosTxop(tid)->UpdateObo(false, m_linkId);
+                      m_raAck = false;
+                    }
+                    else if (m_psduMap.at(staId)->GetHeader(0).HasData())
+                    {
+                      m_mac->GetQosTxop(tid)->StartMuEdcaTimerNow(m_linkId);
+                    }
+                    else {
                       m_mac->GetQosTxop(tid)->UpdateObo(false, m_linkId);
                       m_raAck = false;
                     }
