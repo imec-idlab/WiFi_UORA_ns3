@@ -481,6 +481,8 @@ class QosTxop : public Txop
      */
     uint8_t GetOcw(uint8_t linkId) const;
 
+    void ToggleMuEdcaTimer(bool);
+
   protected:
     /**
      * Structure holding information specific to a single link. Here, the meaning of
@@ -547,6 +549,7 @@ class QosTxop : public Txop
     uint8_t m_nMaxInflights;                  //!< the maximum number of links on which
                                               //!< an MPDU can be in-flight at the same
                                               //!< time
+    bool m_muEdcaTimerRunning;
 
     /// TracedCallback for TXOP trace typedef
     typedef TracedCallback<Time /* start time */, Time /* duration */, uint8_t /* link ID*/>

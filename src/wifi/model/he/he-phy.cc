@@ -645,9 +645,8 @@ HePhy::ProcessSigA(Ptr<Event> event, PhyFieldRxStatus status)
     params.bssColor = txVector.GetBssColor();
     NotifyEndOfHeSigA(params); // if OBSS_PD CCA_RESET, set power restriction first and wait till
                                // field is processed before switching to IDLE
-
     if (status.isSuccess)
-    {
+    { 
         // Check if PPDU is filtered based on the BSS color
         uint8_t myBssColor = GetBssColor();
         uint8_t rxBssColor = txVector.GetBssColor();
@@ -699,7 +698,9 @@ HePhy::ProcessSigA(Ptr<Event> event, PhyFieldRxStatus status)
                 return PhyFieldRxStatus(false, FILTERED, DROP);
             }
             uint16_t staId = ppdu->GetStaId();
-            if (m_trigVector->GetHeMuUserInfoMap().find(staId) ==
+            bool isRandomAccess = txVector.GetHeMuUserInfo(staId).ru.IsRandomAccess();
+
+            if ((!isRandomAccess) && m_trigVector->GetHeMuUserInfoMap().find(staId) ==
                 m_trigVector->GetHeMuUserInfoMap().end())
             {
                 NS_LOG_DEBUG("TB PPDU received from un unexpected STA ID");

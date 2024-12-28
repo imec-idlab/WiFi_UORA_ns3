@@ -243,12 +243,33 @@ QosTxop::StartMuEdcaTimerNow(uint8_t linkId)
     NS_LOG_FUNCTION(this << +linkId);
     auto& link = GetLink(linkId);
     link.muEdcaTimerStartTime = Simulator::Now();
-    if (EdcaDisabled(linkId))
+    if (!EdcaDisabled(linkId))
     {
-      link.muEdcaTimer = MicroSeconds (link.muEdcaTimer.GetMicroSeconds() * 8192 );
+        link.muEdcaTimer = MicroSeconds (link.muEdcaTimer.GetMicroSeconds() * 8192 );
         NS_LOG_DEBUG("Disable EDCA for " << link.muEdcaTimer.As(Time::MS));
         m_mac->GetChannelAccessManager(linkId)->DisableEdcaFor(this, link.muEdcaTimer);
+        m_muEdcaTimerRunning = true;
+        Simulator::Schedule(link.muEdcaTimer, &QosTxop::ToggleMuEdcaTimer, this, false);
     }
+}
+
+void 
+QosTxop::UpdateMuEdcaTimer(uint8_t linkId, Time timer)
+{
+  NS_LOG_FUNCTION(this << +linkId);
+  auto& link = GetLink(linkId);
+  link.muEdcaTimerStartTime = MilliSeconds(0);
+  if (EdcaDisabled(linkId))
+  {
+    NS_LOG_DEBUG("Updating EDCA disabled time for " << timer.As(Time::MS));
+    m_mac->GetChannelAccessManager(linkId)->DisableEdcaFor(this, timer);
+  }
+}
+
+void
+QosTxop::ToggleMuEdcaTimer(bool value)
+{
+  m_muEdcaTimerRunning = value;
 }
 
 bool
@@ -257,7 +278,7 @@ QosTxop::MuEdcaTimerRunning(uint8_t linkId) const
     auto& link = GetLink(linkId);
     return (link.muEdcaTimerStartTime.IsStrictlyPositive() &&
             link.muEdcaTimer.IsStrictlyPositive() &&
-            link.muEdcaTimerStartTime + link.muEdcaTimer > Simulator::Now());
+            m_muEdcaTimerRunning);
 }
 
 bool
@@ -273,7 +294,7 @@ QosTxop::GetMinCw(uint8_t linkId) const
     {
         return GetLink(linkId).cwMin;
     }
-    NS_ASSERT(!EdcaDisabled(linkId));
+    NS_ASSERT(EdcaDisabled(linkId));
     return GetLink(linkId).muCwMin;
 }
 
@@ -284,7 +305,7 @@ QosTxop::GetMaxCw(uint8_t linkId) const
     {
         return GetLink(linkId).cwMax;
     }
-    NS_ASSERT(!EdcaDisabled(linkId));
+    NS_ASSERT(EdcaDisabled(linkId));
     return GetLink(linkId).muCwMax;
 }
 
@@ -649,7 +670,7 @@ QosTxop::NotifyChannelReleased(uint8_t linkId)
 
     if (link.startTxop.IsStrictlyPositive())
     {
-        NS_LOG_DEBUG("Terminating TXOP. Duration = " << Simulator::Now() - link.startTxop);
+        NS_LOG_DEBUG("Terminating TXOP. Duration = " << Simulator::Now() - link.startTxop << " link.backoffStart " <<link.backoffStart );
         m_txopTrace(link.startTxop, Simulator::Now() - link.startTxop, linkId);
     }
     link.startTxop = Seconds(0);

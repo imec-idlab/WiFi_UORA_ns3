@@ -179,6 +179,8 @@ class BlockAckManager : public Object
      * \param mpdu The acknowledged MPDU.
      */
     void NotifyGotAck(uint8_t linkId, Ptr<const WifiMpdu> mpdu);
+    void NotifyGotAckQosNull(uint8_t linkId, Ptr<const WifiMpdu> mpdu);
+
     /**
      * Invoked upon missed reception of an Ack frame on the given link after the
      * transmission of a QoS data frame sent under an established block ack agreement.

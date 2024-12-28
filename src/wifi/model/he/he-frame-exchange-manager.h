@@ -374,6 +374,9 @@ class HeFrameExchangeManager : public VhtFrameExchangeManager
     EventId m_multiStaBaEvent;                    //!< Sending a Multi-STA BlockAck event
     MuSnrTag m_muSnrTag;                          //!< Tag to attach to Multi-STA BlockAck frames
     bool m_triggerFrameInAmpdu; //!< True if the received A-MPDU contains an MU-BAR
+    bool val;
+    uint16_t m_numRaRus;
+    bool m_raAck;
 };
 
 } // namespace ns3

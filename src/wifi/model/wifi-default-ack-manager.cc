@@ -20,6 +20,7 @@
 #include "wifi-default-ack-manager.h"
 
 #include "ap-wifi-mac.h"
+#include "sta-wifi-mac.h"
 #include "ctrl-headers.h"
 #include "qos-utils.h"
 #include "wifi-mac-queue.h"
@@ -240,8 +241,25 @@ WifiDefaultAckManager::TryAddMpdu(Ptr<const WifiMpdu> mpdu, const WifiTxParamete
         {
             // QoS Null frame
             WifiNoAck* acknowledgment = nullptr;
+            //
+            //WifiAckAfterTbPpdu* acknowledgment = new WifiAckAfterTbPpdu;
+            //acknowledgment->SetQosAckPolicy(receiver, hdr.GetQosTid(), WifiMacHeader::NORMAL_ACK);
 
-            if (txParams.m_acknowledgment)
+            Ptr<StaWifiMac> staMac = DynamicCast<StaWifiMac>(m_mac);
+            uint16_t staId = staMac->GetAssociationId();
+            bool isRandomAccess = txParams.m_txVector.GetRu(staId).IsRandomAccess();
+
+            /*
+             * Set ACK Policy for RA
+             *
+             */ 
+            if (isRandomAccess)
+            {
+              WifiAckAfterTbPpdu* acknowledgment = new WifiAckAfterTbPpdu;
+              acknowledgment->SetQosAckPolicy(receiver, hdr.GetQosTid(), WifiMacHeader::NORMAL_ACK);
+              return std::unique_ptr<WifiAcknowledgment>(acknowledgment);
+            }
+            else if (txParams.m_acknowledgment)
             {
                 NS_ASSERT(txParams.m_acknowledgment->method == WifiAcknowledgment::NONE);
                 acknowledgment = static_cast<WifiNoAck*>(txParams.m_acknowledgment.get());
@@ -250,6 +268,7 @@ WifiDefaultAckManager::TryAddMpdu(Ptr<const WifiMpdu> mpdu, const WifiTxParamete
             else
             {
                 acknowledgment = new WifiNoAck;
+                
             }
             acknowledgment->SetQosAckPolicy(receiver, hdr.GetQosTid(), WifiMacHeader::NO_ACK);
             return std::unique_ptr<WifiAcknowledgment>(acknowledgment);
@@ -750,7 +769,8 @@ WifiDefaultAckManager::TryUlMuTransmission(Ptr<const WifiMpdu> mpdu,
         }
         else
         {
-            //workaround: all RUs are allocated for random access
+            //workaround: all RUs are allocated for random access only when all
+            //RaRus
             acknowledgment->tbPpduTxVector = trigger.GetHeTbTxVector(0);
 
             WifiMode blockAckMode = GetWifiRemoteStationManager()->GetControlAnswerMode (HePhy::GetHeMcs(trigger.FindUserInfoWithAid(0)->GetUlMcs ()));
@@ -771,7 +791,86 @@ WifiDefaultAckManager::TryUlMuTransmission(Ptr<const WifiMpdu> mpdu,
     }
     else if (trigger.IsBsrp())
     {
+        /*
+         * ACK for when there is RaRu
+         */
+       WifiUlMuMultiStaBa* acknowledgment = new WifiUlMuMultiStaBa;
+
+        if (auto userInfoIt = trigger.FindUserInfoWithAid(0); userInfoIt != trigger.end() )
+        {
+             for (const auto& userInfo : trigger)
+             {
+               uint16_t aid12 = userInfo.GetAid12();
+
+               if (aid12 == 2046)
+               {
+                 NS_LOG_INFO("Unallocated RU");
+                 continue;
+               }
+
+               NS_ABORT_MSG_IF(aid12 > 2007, "Allocation of such RA-RUs is not supported");
+
+               if (aid12)
+               {
+                 NS_ASSERT(apMac->GetStaList(m_linkId).find(aid12) != apMac->GetStaList(m_linkId).end());
+                 Mac48Address staAddress = apMac->GetStaList(m_linkId).find(aid12)->second;
+
+                 // find a TID for which a BA agreement exists with the given originator
+                 uint8_t tid = 0;
+                 while (tid < 8 && !m_mac->GetBaAgreementEstablishedAsRecipient(staAddress, tid))
+                 {
+                   tid++;
+                 }
+
+                 NS_ASSERT_MSG(tid < 8,
+                     "No Block Ack agreement established with originator " << staAddress);
+
+                 std::size_t index = acknowledgment->baType.m_bitmapLen.size();
+                 acknowledgment->stationsReceivingMultiStaBa.emplace(std::make_pair(staAddress, tid),
+                                                                    index);
+
+                 // we assume the Block Acknowledgment context is used for the multi-STA BlockAck frame
+                 // (since it requires the longest TX time due to the presence of a bitmap)
+                 acknowledgment->baType.m_bitmapLen.push_back(
+                     m_mac->GetBaTypeAsRecipient(staAddress, tid).m_bitmapLen.at(0));
+               }
+             }
+
+             CtrlTriggerHeader::Iterator triggerIt = trigger.begin();
+             while (triggerIt != trigger.end () && !triggerIt->GetAid12()) triggerIt++;
+             if (triggerIt != trigger.end ())
+             {
+               uint16_t staId = triggerIt->GetAid12();
+               acknowledgment->tbPpduTxVector = trigger.GetHeTbTxVector(staId);
+               acknowledgment->multiStaBaTxVector = GetWifiRemoteStationManager()->GetBlockAckTxVector(
+                  apMac->GetStaList(m_linkId).find(staId)->second,
+                  acknowledgment->tbPpduTxVector);
+               return std::unique_ptr<WifiUlMuMultiStaBa>(acknowledgment);
+             }
+             else
+             {
+               //workaround: all RUs are allocated for random access only when all
+               //RaRus
+               acknowledgment->tbPpduTxVector = trigger.GetHeTbTxVector(0);
+
+               WifiMode blockAckMode = GetWifiRemoteStationManager()->GetControlAnswerMode (HePhy::GetHeMcs(trigger.FindUserInfoWithAid(0)->GetUlMcs ()));
+               WifiTxVector v;
+               v.SetMode(blockAckMode);
+               v.SetPreambleType(
+                  GetPreambleForTransmission(blockAckMode.GetModulationClass(), GetWifiRemoteStationManager()->GetShortPreambleEnabled()));
+               v.SetTxPowerLevel(GetWifiRemoteStationManager()->GetDefaultTxPowerLevel());
+               v.SetChannelWidth(GetWifiRemoteStationManager()->GetPhy ()->GetTxBandwidth(blockAckMode));
+               uint16_t blockAckTxGuardInterval = txParams.m_txVector.GetGuardInterval ();
+               v.SetGuardInterval(blockAckTxGuardInterval);
+               v.SetNss(1);
+
+               acknowledgment->multiStaBaTxVector = v;
+               return std::unique_ptr<WifiUlMuMultiStaBa>(acknowledgment);
+             }
+        }
+        
         return std::unique_ptr<WifiAcknowledgment>(new WifiNoAck);
+        
     }
 
     return nullptr;

@@ -1613,6 +1613,10 @@ ApWifiMac::Receive(Ptr<const WifiMpdu> mpdu, uint8_t linkId)
                         DeaggregateAmsduAndForward(mpdu);
                         packet = nullptr;
                     }
+                    else if (!hdr->HasData())
+                    {
+                      NotifyRx(packet);
+                    }
                     else
                     {
                         ForwardUp(packet, from, GetAddress());

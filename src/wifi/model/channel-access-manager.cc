@@ -280,6 +280,11 @@ ChannelAccessManager::NeedBackoffUponAccess(Ptr<Txop> txop)
     {
         return false;
     }
+    
+    if (StaticCast<QosTxop>(txop)->EdcaDisabled(m_linkId) )
+    {
+      return false;
+    }
 
     // the Txop might have a stale value of remaining backoff slots
     UpdateBackoff();
@@ -339,6 +344,10 @@ ChannelAccessManager::RequestAccess(Ptr<Txop> txop)
     if (m_sleeping || m_off)
     {
         return;
+    }
+    if (StaticCast<QosTxop>(txop)->EdcaDisabled(m_linkId) )
+    {
+      return;
     }
     /*
      * EDCAF operations shall be performed at slot boundaries (Sec. 10.22.2.4 of 802.11-2016)
@@ -568,7 +577,7 @@ ChannelAccessManager::DoRestartAccessTimeoutIfNeeded()
         if (txop->GetAccessStatus(m_linkId) == Txop::REQUESTED)
         {
             Time tmp = GetBackoffEndFor(txop);
-            if (tmp > Simulator::Now())
+            if (tmp > Simulator::Now() && !(StaticCast<QosTxop>(txop)->EdcaDisabled(m_linkId)))
             {
                 accessTimeoutNeeded = true;
                 expectedBackoffEnd = std::min(expectedBackoffEnd, tmp);
@@ -576,7 +585,7 @@ ChannelAccessManager::DoRestartAccessTimeoutIfNeeded()
         }
     }
     NS_LOG_DEBUG("Access timeout needed: " << accessTimeoutNeeded);
-    if (accessTimeoutNeeded)
+    if (accessTimeoutNeeded )
     {
         NS_LOG_DEBUG("expected backoff end=" << expectedBackoffEnd);
         Time expectedBackoffDelay = expectedBackoffEnd - Simulator::Now();

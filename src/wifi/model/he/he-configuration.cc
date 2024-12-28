@@ -186,7 +186,7 @@ HeConfiguration::GetTypeId()
                           MakeUintegerChecker<uint8_t>(0, 127))
             .AddAttribute("OCwMax",
                           "Maximum contention window (OCwMax) for UORA",
-                          UintegerValue(32),
+                          UintegerValue(127),
                           MakeUintegerAccessor(&HeConfiguration::m_OCwMax),
                           MakeUintegerChecker<uint8_t>(0, 127));
     return tid;

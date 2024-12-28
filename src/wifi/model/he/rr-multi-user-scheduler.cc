@@ -348,6 +348,7 @@ RrMultiUserScheduler::TrySendingBsrpTf()
     auto item = GetTriggerFrame(m_trigger, m_linkId);
     m_triggerMacHdr = item->GetHeader();
 
+
     m_txParams.Clear();
     // set the TXVECTOR used to send the Trigger Frame
     m_txParams.m_txVector =
@@ -378,8 +379,9 @@ RrMultiUserScheduler::TrySendingBsrpTf()
         // TryAddMpdu only considers the time to transmit the Trigger Frame
         NS_ASSERT(m_txParams.m_protection &&
                   m_txParams.m_protection->protectionTime != Time::Min());
-        NS_ASSERT(m_txParams.m_acknowledgment &&
-                  m_txParams.m_acknowledgment->acknowledgmentTime.IsZero());
+        NS_ASSERT(m_txParams.m_acknowledgment && (
+                  m_txParams.m_acknowledgment->acknowledgmentTime != Time::Min()
+                  || m_txParams.m_acknowledgment->acknowledgmentTime.IsZero() ));
         NS_ASSERT(m_txParams.m_txDuration != Time::Min());
 
         if (m_txParams.m_protection->protectionTime + m_txParams.m_txDuration // BSRP TF tx time
@@ -421,13 +423,13 @@ RrMultiUserScheduler::TrySendingBasicTf()
     WifiTxVector txVector = GetTxVectorForUlMu([this](const MasterInfo& info) {
         const auto& staList = m_apMac->GetStaList(m_linkId);
         return staList.find(info.aid) != staList.cend() &&
-               m_apMac->GetMaxBufferStatus(info.address) > 0;
+               ( m_apMac->GetMaxBufferStatus(info.address) > 0  && m_apMac->GetMaxBufferStatus(info.address) < 254) ;
     }, true);
 
     if (txVector.GetHeMuUserInfoMap().empty())
     {
         NS_LOG_DEBUG("No suitable station found");
-        return TxFormat::DL_MU_TX;
+        return TrySendingBsrpTf();
     }
 
 
@@ -436,7 +438,10 @@ RrMultiUserScheduler::TrySendingBasicTf()
     for (const auto& candidate : txVector.GetHeMuUserInfoMap())
     {
         //AID 0 is for Random Access RUs
-        if (!candidate.first) {maxBufferSize = m_ulPsduSize;continue;}//TODO: set to max buf size among users
+        if (!candidate.first) {maxBufferSize = ((m_ulPsduSize + 511) / 512 ) * 512;
+          m_edca->GetAccessCategory();
+        continue;}//TODO: set to max buf size among users
+
 
         // AID non-zero
         auto address = m_apMac->GetMldOrLinkAddressByAid(candidate.first);
@@ -446,11 +451,11 @@ RrMultiUserScheduler::TrySendingBasicTf()
         if (queueSize == 255)
         {
             NS_LOG_DEBUG("Buffer status of station " << *address << " is unknown");
-            maxBufferSize = std::max(maxBufferSize, m_ulPsduSize);
         }
         else if (queueSize == 254)
         {
             NS_LOG_DEBUG("Buffer status of station " << *address << " is not limited");
+
             maxBufferSize = 0xffffffff;
         }
         else
@@ -458,6 +463,7 @@ RrMultiUserScheduler::TrySendingBasicTf()
             NS_LOG_DEBUG("Buffer status of station " << *address << " is " << +queueSize);
             maxBufferSize = std::max(maxBufferSize, static_cast<uint32_t>(queueSize * 256));
         }
+
     }
 
     if (maxBufferSize == 0)
@@ -841,32 +847,40 @@ RrMultiUserScheduler::FinalizeTxVector(WifiTxVector& txVector, bool isBasicTrigg
 
     //Calculate number of random access RUs
     std::size_t nRandomAccessRus = 0;
-    //if (isBasicTrigger)
-    //{
-        nRandomAccessRus = m_numRaRus;
-        std::size_t totalRus = HeRu::GetNRus (m_allowedWidth, ruType);
-        std::size_t _26tonesRus = (m_useCentral26TonesRus) ? nCentral26TonesRus : 0;
+    nRandomAccessRus = m_numRaRus;
+    std::size_t totalRus = HeRu::GetNRus (m_allowedWidth, ruType);
+    std::size_t _26tonesRus = (m_useCentral26TonesRus) ? nCentral26TonesRus : 0;
 
-        if (totalRus + _26tonesRus <= nRusAssigned + nRandomAccessRus)
+    /*
+     * When BasicTF, the focus is more on the number of candidates that report
+     * buffer size of > 0
+     *
+     */
+    //if (!isBasicTrigger) {
+    if (totalRus + _26tonesRus <= nRusAssigned + nRandomAccessRus)
+    {
+      if (_26tonesRus > 0 && _26tonesRus >= nRandomAccessRus)
+      {
+        nCentral26TonesRus -= nRandomAccessRus;
+      }
+      else
+      {
+        nCentral26TonesRus = 0;
+        std::size_t neededRus = nRandomAccessRus - _26tonesRus;
+        if (isBasicTrigger)
         {
-            if (_26tonesRus > 0 && _26tonesRus >= nRandomAccessRus)
-            {
-                nCentral26TonesRus -= nRandomAccessRus;
-            }
-            else
-            {
-                nCentral26TonesRus = 0;
-                std::size_t neededRus = nRandomAccessRus - _26tonesRus;
-                if (totalRus < neededRus)
-                {
-                    nRandomAccessRus = totalRus + _26tonesRus;
-                }
-                else
-                {
-                    nRusAssigned -= neededRus - (totalRus - nRusAssigned);
-                }
-            }
+          nRandomAccessRus = (nRusAssigned < totalRus) ? (totalRus - nRusAssigned) + _26tonesRus : (nRusAssigned - totalRus) + _26tonesRus;
         }
+        else if (totalRus < neededRus)
+        {
+          nRandomAccessRus = totalRus + _26tonesRus;
+        }
+        else
+        {
+          nRusAssigned -= neededRus - (totalRus - nRusAssigned);
+        }
+      }
+    }
     //}
 
     if (!m_useCentral26TonesRus || m_candidates.size() + nRandomAccessRus == nRusAssigned)
@@ -913,12 +927,14 @@ RrMultiUserScheduler::FinalizeTxVector(WifiTxVector& txVector, bool isBasicTrigg
         if (user.second.mcs < minMcs) minMcs = user.second.mcs;
         if (user.second.nss < minMcs) minNss = user.second.nss;
     }
+    //if(!isBasicTrigger){
     for (std::size_t i = 0; i < nRandomAccessRus; i++)
     {
         HeMuUserInfo info = {(ruSetIt != ruSet.end () ? *ruSetIt++ : *central26TonesRusIt++), minMcs, minNss};
         info.ru.SetRandomAccessFlag (true);
         txVector.SetHeMuUserInfo(0, info); //AID 0 = RANDOM ACCESS RU
     }
+    //}
 }
 
 void

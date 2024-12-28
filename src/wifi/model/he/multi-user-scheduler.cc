@@ -355,6 +355,9 @@ MultiUserScheduler::GetMaxSizeOfQosNullAmpdu(const CtrlTriggerHeader& trigger) c
         maxSize = MpduAggregator::GetSizeIfAggregated(headerSize + WIFI_MAC_FCS_LENGTH, maxSize);
     }
 
+    if (!maxSize) {
+      maxSize = MpduAggregator::GetSizeIfAggregated(headerSize + WIFI_MAC_FCS_LENGTH, maxSize); //RaRUs 
+    }
     return maxSize;
 }
 

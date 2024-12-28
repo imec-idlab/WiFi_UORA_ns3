@@ -22,6 +22,7 @@
  * with Nicola Baldo and Dean Armstrong
  */
 
+#include <signal.h>
 #include "spectrum-wifi-phy.h"
 
 #include "interference-helper.h"
@@ -465,6 +466,7 @@ SpectrumWifiPhy::Transmit(Ptr<WifiSpectrumSignalParameters> txParams)
     txParams->txAntenna = m_antenna;
 
     m_channel->StartTx(txParams);
+
 }
 
 uint32_t
