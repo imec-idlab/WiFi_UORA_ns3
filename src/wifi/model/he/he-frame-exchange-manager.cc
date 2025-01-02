@@ -1379,7 +1379,9 @@ HeFrameExchangeManager::BlockAckAfterTbPpduTimeout(Ptr<WifiPsdu> psdu, const Wif
 
     if (m_raAck)
     {
-      m_edca->UpdateFailedOcw(m_linkId);
+      const WifiMacHeader& hdr = psdu->GetHeader(0);
+      Ptr<QosTxop> edca = m_mac->GetQosTxop( hdr.GetQosTid());
+      edca->UpdateFailedOcw(m_linkId);
     }
 
     // call ReportDataFailed to increase SRC/LRC
