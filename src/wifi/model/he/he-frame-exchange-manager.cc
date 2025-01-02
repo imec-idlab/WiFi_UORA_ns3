@@ -157,8 +157,8 @@ HeFrameExchangeManager::StartFrameExchange(Ptr<QosTxop> edca, Time availableTime
     MultiUserScheduler::TxFormat txFormat = MultiUserScheduler::SU_TX;
     Ptr<const WifiMpdu> mpdu;
 
-    //if (Simulator::Now().GetSeconds() <= Seconds(0.35).GetSeconds())
-      //return VhtFrameExchangeManager::StartFrameExchange(edca, availableTime, initialFrame);
+    if (Simulator::Now().GetSeconds() <= Seconds(0.5).GetSeconds())
+      return VhtFrameExchangeManager::StartFrameExchange(edca, availableTime, initialFrame);
     /*
      * We consult the Multi-user Scheduler (if available) to know the type of transmission to make
      * if:
@@ -1377,6 +1377,11 @@ HeFrameExchangeManager::BlockAckAfterTbPpduTimeout(Ptr<WifiPsdu> psdu, const Wif
 
     bool resetCw;
 
+    if (m_raAck)
+    {
+      m_edca->UpdateFailedOcw(m_linkId);
+    }
+
     // call ReportDataFailed to increase SRC/LRC
     GetWifiRemoteStationManager()->ReportDataFailed(*psdu->begin());
 
@@ -2357,6 +2362,17 @@ HeFrameExchangeManager::ReceiveMpdu(Ptr<const WifiMpdu> mpdu,
 
     const WifiMacHeader& hdr = mpdu->GetHeader();
 
+    /*if (Simulator::Now().GetSeconds() >= 0.261359444 && hdr.GetAddr2() == "00:00:00:00:00:0a")
+    {
+      std::cout <<
+        " isRandomAccess " << txVector.GetRu(m_apMac->GetAssociationId(hdr.GetAddr2(), m_linkId)).IsRandomAccess()
+        <<" txVector.IsUlMu() " <<txVector.IsUlMu()
+        << " AID " <<m_apMac->GetAssociationId(hdr.GetAddr2(), m_linkId)
+        << " m_txTimer.IsRunning() " <<m_txTimer.IsRunning()
+        <<" m_txTimer.GetReason()  "<<m_txTimer.GetReason()
+        <<std::endl;
+    }*/
+
     bool isRandomAccess = false;
     if (txVector.IsUlMu()) { isRandomAccess = txVector.GetRu(m_apMac->GetAssociationId(hdr.GetAddr2(), m_linkId)).IsRandomAccess();}
     if (txVector.IsUlMu() && ((m_txTimer.IsRunning() && m_txTimer.GetReason() == WifiTxTimer::WAIT_TB_PPDU_AFTER_BASIC_TF) ))
@@ -2682,7 +2698,14 @@ HeFrameExchangeManager::ReceiveMpdu(Ptr<const WifiMpdu> mpdu,
             {
                 NS_LOG_DEBUG("No Per AID TID Info subfield intended for me");
                 if (m_raAck){
-                  uint8_t tid = blockAck.GetTidInfo(0);
+                  uint8_t tid = blockAck.GetTidInfo();
+                  if (tid == 14)
+                  {
+                    NS_ABORT_IF(m_psduMap.empty() || m_psduMap.begin()->first != staId);
+                    std::set<uint8_t> tids = m_psduMap.at(staId)->GetTids();
+                    NS_ABORT_MSG_IF(tids.size() > 1, "Multi-TID A-MPDUs not supported yet");
+                    tid = *tids.begin();
+                  }
                   m_mac->GetQosTxop(tid)->UpdateFailedOcw(m_linkId);
                   m_raAck = false;
                 }

@@ -100,12 +100,13 @@ void RxTraceWithAddress ( Ptr<const Packet> p, const Address &src, const Address
 
 int main(int argc, char *argv[])
 {
-  //LogComponentEnable("WifiPhy", LOG_LEVEL_DEBUG);
+  //LogComponentEnable("QosFrameExchangeManager", LOG_LEVEL_DEBUG);
   //LogComponentEnable("WifiPhyStateHelper", LOG_LEVEL_DEBUG);
   //LogComponentEnable("WifiMac", LOG_LEVEL_DEBUG);
   //LogComponentEnable("ApWifiMac", LOG_LEVEL_DEBUG);
   //LogComponentEnable("WifiDefaultAckManager", LOG_LEVEL_DEBUG);
   //LogComponentEnable("HeFrameExchangeManager", LOG_LEVEL_DEBUG);
+  //LogComponentEnable("HtFrameExchangeManager", LOG_LEVEL_DEBUG);
   //LogComponentEnable("BlockAckManager", LOG_LEVEL_DEBUG);
   //LogComponentEnable("ChannelAccessManager", LOG_LEVEL_DEBUG);
   //LogComponentEnable("QosTxop", LOG_LEVEL_DEBUG);
@@ -151,9 +152,9 @@ int main(int argc, char *argv[])
   uint32_t ulPayloadSize = 93; // must fit in the max TX duration when transmitting at MCS 0 over an RU of 26 tones
   std::string trafficType {"CBR"}; //CBR or not
   double interval {0.005}; //seconds
-  bool randomStart {false};
+  bool randomStart {true};
   std::string accessCategory {"AC_VO"};
-  bool enableAggregation {true};
+  bool enableAggregation {false};
 
 
   CommandLine cmd (__FILE__);

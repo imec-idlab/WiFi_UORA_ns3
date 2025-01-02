@@ -867,11 +867,7 @@ RrMultiUserScheduler::FinalizeTxVector(WifiTxVector& txVector, bool isBasicTrigg
       {
         nCentral26TonesRus = 0;
         std::size_t neededRus = nRandomAccessRus - _26tonesRus;
-        if (isBasicTrigger)
-        {
-          nRandomAccessRus = (nRusAssigned < totalRus) ? (totalRus - nRusAssigned) + _26tonesRus : (nRusAssigned - totalRus) + _26tonesRus;
-        }
-        else if (totalRus < neededRus)
+        if (totalRus < neededRus)
         {
           nRandomAccessRus = totalRus + _26tonesRus;
         }
