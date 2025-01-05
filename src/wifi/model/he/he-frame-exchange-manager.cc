@@ -1379,9 +1379,12 @@ HeFrameExchangeManager::BlockAckAfterTbPpduTimeout(Ptr<WifiPsdu> psdu, const Wif
 
     if (m_raAck)
     {
-      const WifiMacHeader& hdr = psdu->GetHeader(0);
-      Ptr<QosTxop> edca = m_mac->GetQosTxop( hdr.GetQosTid());
+      uint16_t staId = m_staMac->GetAssociationId();
+      std::set<uint8_t> tids = m_psduMap.at(staId)->GetTids();
+      uint8_t tid = *tids.begin();
+      Ptr<QosTxop> edca = m_staMac->GetQosTxop(tid);
       edca->UpdateFailedOcw(m_linkId);
+      m_raAck = false;
     }
 
     // call ReportDataFailed to increase SRC/LRC
@@ -2505,7 +2508,7 @@ HeFrameExchangeManager::ReceiveMpdu(Ptr<const WifiMpdu> mpdu,
         if(hdr.GetQosAckPolicy() == WifiMacHeader::NORMAL_ACK)
         {
           uint8_t tid = hdr.GetQosTid();
-          GetBaManager(tid)->NotifyGotMpdu(mpdu);
+          //GetBaManager(tid)->NotifyGotMpdu(mpdu);
 
           // Acknowledgment context of Multi-STA Block Acks
           acknowledgment->stationsReceivingMultiStaBa.emplace(std::make_pair(sender, tid), index);
@@ -2708,7 +2711,7 @@ HeFrameExchangeManager::ReceiveMpdu(Ptr<const WifiMpdu> mpdu,
                     NS_ABORT_MSG_IF(tids.size() > 1, "Multi-TID A-MPDUs not supported yet");
                     tid = *tids.begin();
                   }
-                  m_mac->GetQosTxop(tid)->UpdateFailedOcw(m_linkId);
+                  m_staMac->GetQosTxop(tid)->UpdateFailedOcw(m_linkId);
                   m_raAck = false;
                 }
                 return;
