@@ -205,6 +205,7 @@ QosTxop::UpdateObo(uint8_t obo, uint8_t linkId)
   if (obo)
     link.m_obo = obo;
   else { //successful transmission
+    link.m_ocw = GetOcwMin(linkId);
     Ptr<UniformRandomVariable> rv = CreateObject<UniformRandomVariable>();
     link.m_obo = static_cast<uint8_t>(rv->GetInteger(0, link.m_ocw));
   }

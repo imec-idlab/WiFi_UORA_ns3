@@ -67,7 +67,13 @@ HeFrameExchangeManager::GetTypeId()
                                 "Disable edca or not by starting MUEDCA timer after a successful EDCA transmission",
                                 BooleanValue(false),
                                 MakeBooleanAccessor(&HeFrameExchangeManager::val),
-                                MakeBooleanChecker());
+                                MakeBooleanChecker())
+                            .AddAttribute("MuTxStartTime",
+                                "Time at which to initite Multi-user transmissions",
+                                TimeValue(Seconds(0.0)),
+                                MakeTimeAccessor(&HeFrameExchangeManager::m_muTxStartTime),
+                                MakeTimeChecker());
+
     return tid;
 }
 
@@ -157,8 +163,10 @@ HeFrameExchangeManager::StartFrameExchange(Ptr<QosTxop> edca, Time availableTime
     MultiUserScheduler::TxFormat txFormat = MultiUserScheduler::SU_TX;
     Ptr<const WifiMpdu> mpdu;
 
-    if (Simulator::Now().GetSeconds() <= Seconds(0.5).GetSeconds())
+    if (Simulator::Now().GetSeconds() <= m_muTxStartTime.GetSeconds())
+    {
       return VhtFrameExchangeManager::StartFrameExchange(edca, availableTime, initialFrame);
+    }
     /*
      * We consult the Multi-user Scheduler (if available) to know the type of transmission to make
      * if:
@@ -1814,7 +1822,7 @@ HeFrameExchangeManager::ReceiveBasicTrigger(CtrlTriggerHeader& trigger,
         }
         
         Ptr<QosTxop> edca = m_mac->GetQosTxop(tid);
-        uint8_t _obo = edca->GetObo(m_linkId) ;
+        uint8_t _obo = edca->GetObo(m_linkId);
         uint8_t obo = (_obo <= raRus.size() ) ? 0 : _obo - raRus.size();
         uint8_t queueSize = edca->GetQosQueueSize(tid, hdr.GetAddr2());
 

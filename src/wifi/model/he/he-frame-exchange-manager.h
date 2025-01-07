@@ -377,6 +377,7 @@ class HeFrameExchangeManager : public VhtFrameExchangeManager
     bool val;
     uint16_t m_numRaRus;
     bool m_raAck;
+    Time m_muTxStartTime; 
 };
 
 } // namespace ns3

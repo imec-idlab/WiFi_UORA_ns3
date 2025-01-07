@@ -75,7 +75,7 @@ void SinrTrace (Mac48Address addr, double sinr)
 }
 
 
-void RxTraceWithAddress ( Ptr<const Packet> p, const Address &src, const Address &dst)
+void RxTraceWithAddressParam ( Ptr<const Packet> p, const Address &src, const Address &dst, const double &logTime)
 {
   Ptr<Packet> pkt = p->Copy ();
 
@@ -83,9 +83,9 @@ void RxTraceWithAddress ( Ptr<const Packet> p, const Address &src, const Address
   PacketTag tag;
   pkt->RemovePacketTag(tag);
   pkt->RemoveHeader(seqTs);
-  //startLogTime *= 1e+9;
+  Time startLogTime = Seconds(logTime);
 
-  //if (Simulator::Now().GetNanoSeconds () >= startLogTime) {
+  if (Simulator::Now().GetSeconds () >= startLogTime.GetSeconds()) {
 
     g_statsMap[g_Ip2Mac.at (InetSocketAddress::ConvertFrom (src).GetIpv4 ())].rxBytes += p->GetSize ();
     g_statsMap[g_Ip2Mac.at (InetSocketAddress::ConvertFrom (src).GetIpv4 ())].pktDelays.push_back ((Simulator::Now() - seqTs.GetTs ()).GetSeconds ());
@@ -93,7 +93,7 @@ void RxTraceWithAddress ( Ptr<const Packet> p, const Address &src, const Address
     g_statsMap[g_Ip2Mac.at (InetSocketAddress::ConvertFrom (src).GetIpv4 ())].genTime.push_back(seqTs.GetTs().GetSeconds() );
     g_statsMap[g_Ip2Mac.at (InetSocketAddress::ConvertFrom (src).GetIpv4 ())].rxTime.push_back(Simulator::Now().GetSeconds());
     g_statsMap[g_Ip2Mac.at (InetSocketAddress::ConvertFrom (src).GetIpv4 ())].src.push_back( g_Ip2Mac.at (InetSocketAddress::ConvertFrom (src).GetIpv4 ()));
-  //}
+  }
 }
 
 
@@ -144,7 +144,7 @@ int main(int argc, char *argv[])
   uint32_t nMpdus = 1;
   bool UseCentral26TonesRus = {true};
   bool DelayAccessReqUponAccess = {true};
-  double txOpLimits = {2080};  //AC_VO default value in microseconds
+  double txOpLimits = {1056};  //AC_VO default value in microseconds 2080
   std::string ruAllocationType {"ru-undefined"};
   HeRu::RuType ruAllocType {HeRu::RU_UNDEFINED};
 
@@ -352,6 +352,8 @@ int main(int argc, char *argv[])
 
       Config::SetDefault("ns3::HtFrameExchangeManager::DisableEDCA", BooleanValue(true));
 
+      Config::SetDefault("ns3::HeFrameExchangeManager::MuTxStartTime", TimeValue(Seconds(startLogTime)));
+
     }
 
   /*
@@ -471,8 +473,8 @@ int main(int argc, char *argv[])
                   "BeaconInterval", TimeValue(MicroSeconds(102400)));
 
       apNetDevice = wifi.Install (phy, wifimac, wifiApNode);
-      //phy.EnablePcap("wifi-ax-uora-ap", apNetDevice); // enable pcap tracing
-      //phy.EnablePcap("wifi-ax-uora-sta", staNetDevices);
+      phy.EnablePcap("wifi-ax-uora-ap", apNetDevice); // enable pcap tracing
+      phy.EnablePcap("wifi-ax-uora-sta", staNetDevices);
     }
   else
     {
@@ -564,7 +566,7 @@ int main(int argc, char *argv[])
     }
 
 
-  Config::ConnectWithoutContext("/NodeList/*/ApplicationList/*/$ns3::PacketSink/RxWithAddresses", MakeBoundCallback(&RxTraceWithAddress));
+  Config::ConnectWithoutContext("/NodeList/*/ApplicationList/*/$ns3::PacketSink/RxWithAddressesParam", MakeBoundCallback(&RxTraceWithAddressParam));
 
 
   ProgressBar pg (Seconds(simulationTime + startLogTime ));
