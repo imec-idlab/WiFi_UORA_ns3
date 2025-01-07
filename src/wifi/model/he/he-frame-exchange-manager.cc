@@ -735,9 +735,12 @@ HeFrameExchangeManager::SendPsduMap()
         NS_ASSERT(trigger.IsBsrp());
         NS_ASSERT(m_apMac);
 
+        bool ra_check = (m_txParams.m_acknowledgment->method == WifiAcknowledgment::UL_MU_MULTI_STA_BA);
+
         WifiUlMuMultiStaBa* acknowledgment =
             static_cast<WifiUlMuMultiStaBa*>(m_txParams.m_acknowledgment.get());
 
+        
         // record the set of stations solicited by this Trigger Frame
         m_staExpectTbPpduFrom.clear();
 
@@ -754,12 +757,19 @@ HeFrameExchangeManager::SendPsduMap()
           else
             m_numRaRus++;
         }
-        acknowledgment->stationsReceivingMultiStaBa.clear();
-        acknowledgment->baType.m_bitmapLen.clear();
+        if (ra_check)
+        {
+          acknowledgment->stationsReceivingMultiStaBa.clear();
+          acknowledgment->baType.m_bitmapLen.clear();
+          responseTxVector = &acknowledgment->tbPpduTxVector;
+        }
+        else
+        {
+          txVector = trigger.GetHeTbTxVector(trigger.begin()->GetAid12());
+          responseTxVector = &txVector;
+        }
 
         timerType = WifiTxTimer::WAIT_QOS_NULL_AFTER_BSRP_TF;
-        txVector = trigger.GetHeTbTxVector(trigger.begin()->GetAid12());
-        responseTxVector = &acknowledgment->tbPpduTxVector;;
         m_trigVector = GetTrigVector(m_muScheduler->GetUlMuInfo(m_linkId).trigger);
     }
     /*
