@@ -744,10 +744,6 @@ class Packet : public SimpleRefCount<Packet>
                                              const Address& srcAddress,
                                              const Address& destAddress);
 
-     typedef void (*TwoAddressTracedCallbackParam)(const Ptr<const Packet> packet,
-                                             const Address& srcAddress,
-                                             const Address& destAddress, const double& param);
-
     /**
      * TracedCallback signature for packet and Mac48Address.
      *

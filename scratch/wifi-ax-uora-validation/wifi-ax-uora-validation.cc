@@ -75,7 +75,7 @@ void SinrTrace (Mac48Address addr, double sinr)
 }
 
 
-void RxTraceWithAddressParam ( Ptr<const Packet> p, const Address &src, const Address &dst, const double &logTime)
+void RxTraceWithAddressParam (double logTime, Ptr<const Packet> p, const Address &src, const Address &dst)
 {
   Ptr<Packet> pkt = p->Copy ();
 
@@ -104,13 +104,16 @@ int main(int argc, char *argv[])
   //LogComponentEnable("WifiPhyStateHelper", LOG_LEVEL_DEBUG);
   //LogComponentEnable("WifiMac", LOG_LEVEL_DEBUG);
   //LogComponentEnable("ApWifiMac", LOG_LEVEL_DEBUG);
+  //LogComponentEnable("PhyEntity", LOG_LEVEL_DEBUG);
+
   //LogComponentEnable("WifiDefaultAckManager", LOG_LEVEL_DEBUG);
   //LogComponentEnable("HeFrameExchangeManager", LOG_LEVEL_DEBUG);
   //LogComponentEnable("HtFrameExchangeManager", LOG_LEVEL_DEBUG);
   //LogComponentEnable("BlockAckManager", LOG_LEVEL_DEBUG);
   //LogComponentEnable("ChannelAccessManager", LOG_LEVEL_DEBUG);
   //LogComponentEnable("QosTxop", LOG_LEVEL_DEBUG);
-  //LogComponentEnable("Txop", LOG_LEVEL_DEBUG);
+  //LogComponentEnable("MpduAggregator", LOG_LEVEL_DEBUG);
+  //LogComponentEnable("QosFrameExchangeManager", LOG_LEVEL_DEBUG);
 
   double simulationTime {10};//seconds
   std::string logDir {"output"};
@@ -138,13 +141,13 @@ int main(int argc, char *argv[])
   bool enableUlOfdma {false};
   bool enableBsrp {false};
   double accessReqInterval = {0}; //microseconds
-  bool useRts {false};
+  bool useRts {true};
   bool useExtendedBlockAck {true};
   bool useMuEdca {true};
   uint32_t nMpdus = 1;
   bool UseCentral26TonesRus = {true};
   bool DelayAccessReqUponAccess = {true};
-  double txOpLimits = {1056};  //AC_VO default value in microseconds 2080
+  double txOpLimits = {4800};  //AC_VO default value in microseconds 2080
   std::string ruAllocationType {"ru-undefined"};
   HeRu::RuType ruAllocType {HeRu::RU_UNDEFINED};
 
@@ -228,8 +231,8 @@ int main(int argc, char *argv[])
    * */
   if (useRts)
     {
-      Config::SetDefault ("ns3::WifiRemoteStationManager::RtsCtsThreshold", StringValue ("0"));
-      Config::SetDefault("ns3::WifiDefaultProtectionManager::EnableMuRts", BooleanValue(true));
+      Config::SetDefault ("ns3::WifiRemoteStationManager::RtsCtsThreshold", StringValue ("700"));
+      Config::SetDefault("ns3::WifiDefaultProtectionManager::EnableMuRts", BooleanValue(false));
     }
 
   /*
@@ -306,12 +309,14 @@ int main(int argc, char *argv[])
   /*
    * To use specific UORA Parameter sets
    */
-  if(nRaRus){
+  if(nRaRus)
+  {
     Config::SetDefault ("ns3::HeConfiguration::OCwMin",UintegerValue(7));
     Config::SetDefault("ns3::HeConfiguration::OCwMax", UintegerValue(127));
 
     //prevent stations from explicitly sending BAR request
     Config::SetDefault("ns3::QosTxop::UseExplicitBarAfterMissedBlockAck", BooleanValue(false));
+    Config::SetDefault("ns3::WifiDefaultAckManager::UseExplicitBar", BooleanValue(false));
   }
 
   /*
@@ -374,7 +379,11 @@ int main(int argc, char *argv[])
   Config::SetDefault("ns3::QosFrameExchangeManager::SetQueueSize", BooleanValue(false));
 
   if (enableAggregation)
+  {
     Config::SetDefault ("ns3::WifiRemoteStationManager::FragmentationThreshold", StringValue ("990000"));
+    Config::SetDefault ("ns3::WifiMac::VO_MaxAmpduSize", UintegerValue (0)); //6500631
+    Config::SetDefault("ns3::WifiMac::VO_MaxAmsduSize", UintegerValue (11398)); //11398
+  }
 
   /*
    * Set up Network devices
@@ -469,7 +478,7 @@ int main(int argc, char *argv[])
                   "Ssid", SsidValue (ssid),
                   "VO_BlockAckThreshold", UintegerValue(0),
                   "BeaconGeneration", BooleanValue(true),
-                  "BsrLifetime", TimeValue(MilliSeconds(20)),
+                  "BsrLifetime", TimeValue(MilliSeconds(5)),
                   "BeaconInterval", TimeValue(MicroSeconds(102400)));
 
       apNetDevice = wifi.Install (phy, wifimac, wifiApNode);
@@ -535,8 +544,8 @@ int main(int argc, char *argv[])
     if (randomStart)
     {
       Ptr<RandomVariableStream> rv = CreateObject<UniformRandomVariable> ();
-      rv->SetAttribute("Max", DoubleValue(0.5));
-      staUdpclientApp.StartWithJitter (Seconds (0.0), rv);
+      rv->SetAttribute("Max", DoubleValue(1.5));
+      staUdpclientApp.StartWithJitter (Seconds (1.0), rv);
     }
     else
     {
@@ -552,10 +561,6 @@ int main(int argc, char *argv[])
     {
       Ptr<WifiNetDevice> dev = DynamicCast<WifiNetDevice> ( staNetDevices.Get(i) );
       Ptr<WifiMac> wifi_mac = dev->GetMac();
-      if (enableAggregation) {
-        wifi_mac->SetAttribute("VO_MaxAmpduSize", UintegerValue (nMpdus * ulPayloadSize ));
-        wifi_mac->SetAttribute("VO_MaxAmsduSize", UintegerValue (nMsdus * ulPayloadSize ));
-      }
       wifi_mac->GetQosTxop(AC_VO)->SetTxopLimit(MicroSeconds(txOpLimits));
       auto mac = Mac48Address::ConvertFrom (staNetDevices.Get (i)->GetAddress ());
       auto ip = staNodeInterfaces.Get (i).first->GetAddress (1, 0).GetAddress ();
@@ -564,9 +569,16 @@ int main(int argc, char *argv[])
       staNetDevices.Get(i)->GetObject<WifiNetDevice>()->GetPhy()->GetPhyEntity(WIFI_MOD_CLASS_OFDM)->TraceConnectWithoutContext("SinrTrace", MakeBoundCallback (&SinrTrace, Mac48Address::ConvertFrom (staNetDevices.Get (i)->GetAddress ())));
       staNetDevices.Get(i)->GetObject<WifiNetDevice>()->GetPhy()->GetPhyEntity(WIFI_MOD_CLASS_HE)->TraceConnectWithoutContext("SinrTrace", MakeBoundCallback (&SinrTrace, Mac48Address::ConvertFrom (staNetDevices.Get (i)->GetAddress ())));
     }
+  for (uint32_t i = 0; i < apNetDevice.GetN (); i++)
+    {
+      Ptr<WifiNetDevice> dev = DynamicCast<WifiNetDevice> ( apNetDevice.Get(i) );
+      Ptr<WifiMac> wifi_mac = dev->GetMac();
+      wifi_mac->GetQosTxop(AC_VO)->SetTxopLimit(MicroSeconds(txOpLimits));
+    }
 
+  //auto boundCallback = std::bind(&RxTraceWithAddressParam, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, startLogTime);
 
-  Config::ConnectWithoutContext("/NodeList/*/ApplicationList/*/$ns3::PacketSink/RxWithAddressesParam", MakeBoundCallback(&RxTraceWithAddressParam));
+  Config::ConnectWithoutContext("/NodeList/*/ApplicationList/*/$ns3::PacketSink/RxWithAddresses", MakeBoundCallback(&RxTraceWithAddressParam, startLogTime));
 
 
   ProgressBar pg (Seconds(simulationTime + startLogTime ));

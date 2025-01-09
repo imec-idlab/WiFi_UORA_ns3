@@ -73,10 +73,6 @@ PacketSink::GetTypeId()
                             "A packet has been received",
                             MakeTraceSourceAccessor(&PacketSink::m_rxTraceWithAddresses),
                             "ns3::Packet::TwoAddressTracedCallback")
-            .AddTraceSource("RxWithAddressesParam",
-                            "A packet has been received",
-                            MakeTraceSourceAccessor(&PacketSink::m_rxTraceWithAddressesParam),
-                            "ns3::Packet::TwoAddressTracedCallbackParam")
             .AddTraceSource("RxWithSeqTsSize",
                             "A packet with SeqTsSize header has been received",
                             MakeTraceSourceAccessor(&PacketSink::m_rxTraceWithSeqTsSize),

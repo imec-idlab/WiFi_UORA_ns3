@@ -207,8 +207,6 @@ class PacketSink : public Application
     /// headers
     TracedCallback<Ptr<const Packet>, const Address&, const Address&, const SeqTsSizeHeader&>
         m_rxTraceWithSeqTsSize;
-    /// Callback for tracing the packet Rx events, includes source and destination addresses with extra parameter
-    TracedCallback<Ptr<const Packet>, const Address&, const Address&, const double& > m_rxTraceWithAddressesParam;
 };
 
 } // namespace ns3

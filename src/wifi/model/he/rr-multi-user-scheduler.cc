@@ -847,7 +847,7 @@ RrMultiUserScheduler::FinalizeTxVector(WifiTxVector& txVector, bool isBasicTrigg
 
     //Calculate number of random access RUs
     std::size_t nRandomAccessRus = 0;
-    nRandomAccessRus = m_numRaRus;
+    nRandomAccessRus = m_nRaRus;
     std::size_t totalRus = HeRu::GetNRus (m_allowedWidth, ruType);
     std::size_t _26tonesRus = (m_useCentral26TonesRus) ? nCentral26TonesRus : 0;
 

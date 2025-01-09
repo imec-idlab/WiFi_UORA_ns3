@@ -171,7 +171,7 @@ class RrMultiUserScheduler : public MultiUserScheduler
     WifiMacHeader m_triggerMacHdr;         //!< MAC header for Trigger Frame
     WifiTxParameters m_txParams;           //!< TX parameters
 
-    uint16_t m_numRaRus; //!< Number of RUs that are reserved for random access
+    uint16_t m_nRaRus; //!< Number of RUs that are reserved for random access
     HeRu::RuType m_ruAllocationType; //!< The type of RUs allocated to STAs
 };
 
