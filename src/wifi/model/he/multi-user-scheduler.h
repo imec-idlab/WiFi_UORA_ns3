@@ -130,6 +130,9 @@ class MultiUserScheduler : public Object
      */
     void SetAccessReqInterval(Time interval);
 
+    virtual void UpdatePollList(Mac48Address address) = 0;
+    virtual void SetBtfnRaRus (size_t) = 0;
+
   protected:
     /**
      * Get the station manager attached to the AP on the given link.

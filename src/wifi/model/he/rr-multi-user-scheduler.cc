@@ -39,6 +39,12 @@ NS_LOG_COMPONENT_DEFINE("RrMultiUserScheduler");
 
 NS_OBJECT_ENSURE_REGISTERED(RrMultiUserScheduler);
 
+void
+RrMultiUserScheduler::SetBtfnRaRus (size_t num)
+{
+  m_nRaRusBtf = num;
+}
+
 TypeId
 RrMultiUserScheduler::GetTypeId()
 {
@@ -329,6 +335,7 @@ RrMultiUserScheduler::TrySendingBsrpTf()
         NS_LOG_DEBUG("No HE stations associated: return SU_TX");
         return TxFormat::SU_TX;
     }
+    m_nRaRusBtf = 0;
 
     // only consider stations that have setup the current link
     WifiTxVector txVector = GetTxVectorForUlMu([this](const MasterInfo& info) {
@@ -847,7 +854,7 @@ RrMultiUserScheduler::FinalizeTxVector(WifiTxVector& txVector, bool isBasicTrigg
 
     //Calculate number of random access RUs
     std::size_t nRandomAccessRus = 0;
-    nRandomAccessRus = m_nRaRus;
+    nRandomAccessRus = (isBasicTrigger) ? m_nRaRusBtf : m_nRaRus;
     std::size_t totalRus = HeRu::GetNRus (m_allowedWidth, ruType);
     std::size_t _26tonesRus = (m_useCentral26TonesRus) ? nCentral26TonesRus : 0;
 
@@ -856,27 +863,32 @@ RrMultiUserScheduler::FinalizeTxVector(WifiTxVector& txVector, bool isBasicTrigg
      * buffer size of > 0
      *
      */
-    //if (!isBasicTrigger) {
-    if (totalRus + _26tonesRus <= nRusAssigned + nRandomAccessRus)
+    /*if (isBasicTrigger) 
     {
-      if (_26tonesRus > 0 && _26tonesRus >= nRandomAccessRus)
+      nRusAssigned -= m_nRaRusBtf;
+    }
+    else
+    {*/
+      if (totalRus + _26tonesRus <= nRusAssigned + nRandomAccessRus)
       {
-        nCentral26TonesRus -= nRandomAccessRus;
-      }
-      else
-      {
-        nCentral26TonesRus = 0;
-        std::size_t neededRus = nRandomAccessRus - _26tonesRus;
-        if (totalRus < neededRus)
+        if (_26tonesRus > 0 && _26tonesRus >= nRandomAccessRus)
         {
-          nRandomAccessRus = totalRus + _26tonesRus;
+          nCentral26TonesRus -= nRandomAccessRus;
         }
         else
         {
-          nRusAssigned -= neededRus - (totalRus - nRusAssigned);
+          nCentral26TonesRus = 0;
+          std::size_t neededRus = nRandomAccessRus - _26tonesRus;
+          if (totalRus < neededRus)
+          {
+            nRandomAccessRus = totalRus + _26tonesRus;
+          }
+          else
+          {
+            nRusAssigned -= neededRus - (totalRus - nRusAssigned);
+          }
         }
       }
-    }
     //}
 
     if (!m_useCentral26TonesRus || m_candidates.size() + nRandomAccessRus == nRusAssigned)
@@ -923,14 +935,15 @@ RrMultiUserScheduler::FinalizeTxVector(WifiTxVector& txVector, bool isBasicTrigg
         if (user.second.mcs < minMcs) minMcs = user.second.mcs;
         if (user.second.nss < minMcs) minNss = user.second.nss;
     }
-    //if(!isBasicTrigger){
-    for (std::size_t i = 0; i < nRandomAccessRus; i++)
+    if(!isBasicTrigger)
     {
+      for (std::size_t i = 0; i < nRandomAccessRus; i++)
+      {
         HeMuUserInfo info = {(ruSetIt != ruSet.end () ? *ruSetIt++ : *central26TonesRusIt++), minMcs, minNss};
         info.ru.SetRandomAccessFlag (true);
         txVector.SetHeMuUserInfo(0, info); //AID 0 = RANDOM ACCESS RU
+      }
     }
-    //}
 }
 
 void

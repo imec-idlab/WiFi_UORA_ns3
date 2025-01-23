@@ -181,6 +181,7 @@ HeFrameExchangeManager::StartFrameExchange(Ptr<QosTxop> edca, Time availableTime
           m_mac->GetBaAgreementEstablishedAsOriginator(mpdu->GetHeader().GetAddr1(),
                                                        mpdu->GetHeader().GetQosTid()))))
     {
+        m_muScheduler->SetBtfnRaRus(m_numRaRus);
         txFormat = m_muScheduler->NotifyAccessGranted(edca,
                                                       availableTime,
                                                       initialFrame,
@@ -702,6 +703,7 @@ HeFrameExchangeManager::SendPsduMap()
         
         // record the set of stations solicited by this Trigger Frame
         m_staExpectTbPpduFrom.clear();
+        m_numRaRus = 0;
 
         for (const auto& station : acknowledgment->stationsReceivingMultiStaBa)
         {
@@ -1311,7 +1313,7 @@ HeFrameExchangeManager::TbPpduTimeout(WifiPsduMap* psduMap,
     }
 
     m_psduMap.clear();
-    m_numRaRus = 0;
+    //m_numRaRus = 0;
 }
 
 void
@@ -1940,7 +1942,8 @@ HeFrameExchangeManager::ReceiveBasicTrigger(CtrlTriggerHeader& trigger,
         if (isRandomAccess)
         {
             HeMuUserInfo info = txParams.m_txVector.GetHeMuUserInfo (staId);
-            info.ru.SetRandomAccessFlag (true); //We have to set random access flag again because this information is not present in the packet
+            info.ru.SetRandomAccessFlag (true); //We have to set random access flag again because
+                                                //this information is not present in the packet
             psdu->AddRaRuUserInfo (info);
         }
         SendPsduMapWithProtection(WifiPsduMap{{staId, psdu}}, txParams);

@@ -39,6 +39,12 @@ NS_LOG_COMPONENT_DEFINE("UoraMultiUserScheduler");
 
 NS_OBJECT_ENSURE_REGISTERED(UoraMultiUserScheduler);
 
+void
+UoraMultiUserScheduler::SetBtfnRaRus (size_t num)
+{
+  m_nRaRusBtf = num;
+}
+
 TypeId
 UoraMultiUserScheduler::GetTypeId()
 {

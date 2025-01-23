@@ -232,8 +232,18 @@ UdpClient::Send (void)
                                           << m_peerAddressString);
     }
 #endif // NS3_LOG_ENABLE
-
-  if (m_sent < m_count)
+  if (!m_count)
+    {
+      if (m_enableRandom)
+        {
+          m_sendEvent = Simulator::Schedule (Seconds(m_intervalRandomVariable->GetValue()), &UdpClient::Send, this);
+        }
+      else
+        {
+          m_sendEvent = Simulator::Schedule (m_interval, &UdpClient::Send, this);
+        }
+    }
+  else if (m_sent < m_count)
     {
       if (m_enableRandom)
         {
