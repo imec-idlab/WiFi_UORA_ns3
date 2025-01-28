@@ -44,6 +44,7 @@
 #include "ns3/packet-sink.h"
 #include "ns3/packet-tag.h"
 #include "ns3/ap-server-helper.h"
+#include "ns3/flow-monitor-helper.h"
 
 #include "ns3/arp-cache.h"
 
@@ -147,7 +148,7 @@ int main(int argc, char *argv[])
   uint32_t nMpdus = 1;
   bool UseCentral26TonesRus = {true};
   bool DelayAccessReqUponAccess = {true};
-  double txOpLimits = {4800};  //AC_VO default value in microseconds 2080
+  double txOpLimits = {2080};  //AC_VO default value in microseconds 2080
   std::string ruAllocationType {"ru-undefined"};
   HeRu::RuType ruAllocType {HeRu::RU_UNDEFINED};
 
@@ -311,7 +312,7 @@ int main(int argc, char *argv[])
    */
   if(nRaRus)
   {
-    Config::SetDefault ("ns3::HeConfiguration::OCwMin",UintegerValue(7));
+    Config::SetDefault ("ns3::HeConfiguration::OCwMin",UintegerValue(31));
     Config::SetDefault("ns3::HeConfiguration::OCwMax", UintegerValue(127));
 
     //prevent stations from explicitly sending BAR request
@@ -526,7 +527,7 @@ int main(int argc, char *argv[])
     //InetSocketAddress remoteAddress = InetSocketAddress (serverInterfaces.GetAddress (i), port);
     //remoteAddress.SetTos (0xc0);
     UdpClientHelper staUdpClient (localAddress);
-    staUdpClient.SetAttribute("MaxPackets", UintegerValue(4294967295u));
+    staUdpClient.SetAttribute("MaxPackets", UintegerValue(0));
     staUdpClient.SetAttribute("PacketSize", UintegerValue(ulPayloadSize));
     if (trafficType == "CBR")
     {
@@ -576,14 +577,17 @@ int main(int argc, char *argv[])
       wifi_mac->GetQosTxop(AC_VO)->SetTxopLimit(MicroSeconds(txOpLimits));
     }
 
-  //auto boundCallback = std::bind(&RxTraceWithAddressParam, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, startLogTime);
-
   Config::ConnectWithoutContext("/NodeList/*/ApplicationList/*/$ns3::PacketSink/RxWithAddresses", MakeBoundCallback(&RxTraceWithAddressParam, startLogTime));
 
+
+  //FlowMonitorHelper flowmonHelper;
+  //Ptr<FlowMonitor> monitor = flowmonHelper.InstallAll();
 
   ProgressBar pg (Seconds(simulationTime + startLogTime ));
   Simulator::Stop (Seconds (simulationTime + startLogTime ));
   Simulator::Run ();
+
+  //monitor->SerializeToXmlFile("results.xml", true, true);
 
   uint64_t rxBytes = 0;
 
