@@ -745,6 +745,7 @@ HeFrameExchangeManager::SendPsduMap()
         
         // record the set of stations solicited by this Trigger Frame
         m_staExpectTbPpduFrom.clear();
+        m_numRaRus = 0;
 
         //acknowledgment->stationsReceivingMultiStaBa.clear();
         //acknowledgment->baType.m_bitmapLen.clear();
@@ -1977,7 +1978,6 @@ HeFrameExchangeManager::SendQosNullFramesInTbPpdu(CtrlTriggerHeader& trigger,
      if (isRandomAccess)
     {
         std::vector<uint16_t> raRus;
-
         uint16_t idx = 0;
         for (CtrlTriggerHeader::ConstIterator userInfoIt = trigger.begin (); userInfoIt != trigger.end(); userInfoIt++)
         {
@@ -2008,7 +2008,6 @@ HeFrameExchangeManager::SendQosNullFramesInTbPpdu(CtrlTriggerHeader& trigger,
         int32_t _obo = edca->GetObo(m_linkId) - raRus.size();
         uint8_t obo = (_obo <= 0) ? 0 : _obo;
         uint8_t queueSize = edca->GetQosQueueSize(tid, hdr.GetAddr2());
-
         if (!obo && queueSize){
           Ptr<UniformRandomVariable> rv = CreateObject<UniformRandomVariable> ();
           uint16_t selectedRu = raRus.at(rv->GetValue(0, raRus.size()));
@@ -2387,17 +2386,6 @@ HeFrameExchangeManager::ReceiveMpdu(Ptr<const WifiMpdu> mpdu,
     NS_ASSERT(mpdu->GetHeader().GetAddr1().IsGroup() || mpdu->GetHeader().GetAddr1() == m_self);
 
     const WifiMacHeader& hdr = mpdu->GetHeader();
-
-    /*if (Simulator::Now().GetSeconds() >= 0.261359444 && hdr.GetAddr2() == "00:00:00:00:00:0a")
-    {
-      std::cout <<
-        " isRandomAccess " << txVector.GetRu(m_apMac->GetAssociationId(hdr.GetAddr2(), m_linkId)).IsRandomAccess()
-        <<" txVector.IsUlMu() " <<txVector.IsUlMu()
-        << " AID " <<m_apMac->GetAssociationId(hdr.GetAddr2(), m_linkId)
-        << " m_txTimer.IsRunning() " <<m_txTimer.IsRunning()
-        <<" m_txTimer.GetReason()  "<<m_txTimer.GetReason()
-        <<std::endl;
-    }*/
 
     bool isRandomAccess = false;
     if (txVector.IsUlMu()) { isRandomAccess = txVector.GetRu(m_apMac->GetAssociationId(hdr.GetAddr2(), m_linkId)).IsRandomAccess();}
