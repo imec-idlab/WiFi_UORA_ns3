@@ -1970,11 +1970,6 @@ HeFrameExchangeManager::SendQosNullFramesInTbPpdu(CtrlTriggerHeader& trigger,
 
     NS_LOG_DEBUG("Requested to send QoS Null frames");
 
-    if (!UlMuCsMediumIdle(trigger))
-    {
-        return;
-    }
-
      if (isRandomAccess)
     {
         std::vector<uint16_t> raRus;
@@ -2026,6 +2021,10 @@ HeFrameExchangeManager::SendQosNullFramesInTbPpdu(CtrlTriggerHeader& trigger,
       return;
     }
 
+    if (!UlMuCsMediumIdle(trigger))
+    {
+        return;
+    }
 
     WifiMacHeader header;
     header.SetType(WIFI_MAC_QOSDATA_NULL);
@@ -3095,4 +3094,4 @@ HeFrameExchangeManager::EndReceiveAmpdu(Ptr<const WifiPsdu> psdu,
     VhtFrameExchangeManager::EndReceiveAmpdu(psdu, rxSignalInfo, txVector, perMpduStatus);
 }
 
-} // namespace ns3
+} // namespace 
