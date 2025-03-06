@@ -221,7 +221,9 @@ QosTxop::UpdateFailedOcw(uint8_t linkId)
   uint8_t dOcw = 2 * (link.m_ocw + 1) -1;
 
   link.m_ocw = ( dOcw < oCwMax ) ? dOcw : oCwMax;
-  UpdateObo(false, linkId);
+  Ptr<UniformRandomVariable> rv = CreateObject<UniformRandomVariable>();
+  link.m_obo = static_cast<uint8_t>(rv->GetInteger(0, link.m_ocw));
+
 }
 
 void
