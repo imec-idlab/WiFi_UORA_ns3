@@ -430,7 +430,7 @@ RrMultiUserScheduler::TrySendingBasicTf()
     WifiTxVector txVector = GetTxVectorForUlMu([this](const MasterInfo& info) {
         const auto& staList = m_apMac->GetStaList(m_linkId);
         return staList.find(info.aid) != staList.cend() &&
-               ( m_apMac->GetMaxBufferStatus(info.address) > 0  /*&& m_apMac->GetMaxBufferStatus(info.address) < 254*/) ;
+               (m_apMac->GetMaxBufferStatus(info.address) > 0  && m_apMac->GetMaxBufferStatus(info.address) < 254);
     }, true);
 
     if (txVector.GetHeMuUserInfoMap().empty())
