@@ -63,8 +63,8 @@ HeFrameExchangeManager::GetTypeId()
                             .SetParent<VhtFrameExchangeManager>()
                             .AddConstructor<HeFrameExchangeManager>()
                             .SetGroupName("Wifi")
-                            .AddAttribute("HeDisableEDCA",
-                                "Disable edca or not by starting MUEDCA timer after a successful EDCA transmission",
+                            .AddAttribute("HeActivateNaiks",
+                                "When true, collided or Idle RUs in BSRP exchange are not used in BasicTF",
                                 BooleanValue(false),
                                 MakeBooleanAccessor(&HeFrameExchangeManager::val),
                                 MakeBooleanChecker())
@@ -181,7 +181,9 @@ HeFrameExchangeManager::StartFrameExchange(Ptr<QosTxop> edca, Time availableTime
           m_mac->GetBaAgreementEstablishedAsOriginator(mpdu->GetHeader().GetAddr1(),
                                                        mpdu->GetHeader().GetQosTid()))))
     {
-        m_muScheduler->SetBtfnRaRus(m_numRaRus);
+        if (val){
+          m_muScheduler->SetBtfnRaRus(m_numRaRus);
+        }
         txFormat = m_muScheduler->NotifyAccessGranted(edca,
                                                       availableTime,
                                                       initialFrame,
@@ -1747,6 +1749,7 @@ HeFrameExchangeManager::SendMultiStaBlockAck(const WifiTxParameters& txParams, T
     Time txDuration = m_phy->CalculateTxDuration(GetBlockAckSize(acknowledgment->baType),
                                                  acknowledgment->multiStaBaTxVector,
                                                  m_phy->GetPhyBand());
+
     /**
      * In a BlockAck frame transmitted in response to a frame carried in HE TB PPDU under
      * single protection settings, the Duration/ID field is set to the value obtained from
@@ -1833,7 +1836,7 @@ HeFrameExchangeManager::ReceiveBasicTrigger(CtrlTriggerHeader& trigger,
         if(!tid){
           return;
         }
-        
+
         Ptr<QosTxop> edca = m_mac->GetQosTxop(tid);
         uint8_t _obo = edca->GetObo(m_linkId);
         uint8_t obo = (_obo <= raRus.size() ) ? 0 : _obo - raRus.size();
@@ -2003,12 +2006,15 @@ HeFrameExchangeManager::SendQosNullFramesInTbPpdu(CtrlTriggerHeader& trigger,
         int32_t _obo = edca->GetObo(m_linkId) - raRus.size();
         uint8_t obo = (_obo <= 0) ? 0 : _obo;
         uint8_t queueSize = edca->GetQosQueueSize(tid, hdr.GetAddr2());
+
+        
         if (!obo && queueSize){
           Ptr<UniformRandomVariable> rv = CreateObject<UniformRandomVariable> ();
           uint16_t selectedRu = raRus.at(rv->GetValue(0, raRus.size()));
           CtrlTriggerHeader::Iterator selectedRuIt = trigger.begin ();
           std::advance(selectedRuIt, selectedRu);
           selectedRuIt->SetAid12 (m_staMac->GetAssociationId());
+
         }
         else {
           edca->UpdateObo(obo, m_linkId);
@@ -2547,6 +2553,7 @@ HeFrameExchangeManager::ReceiveMpdu(Ptr<const WifiMpdu> mpdu,
 
         NS_LOG_DEBUG("Received a QoS Null frame in a TB PPDU from " << sender);
 
+
         // remove the sender from the set of stations that are expected to send a TB PPDU
         m_staExpectTbPpduFrom.erase(sender);
 
@@ -2720,6 +2727,7 @@ HeFrameExchangeManager::ReceiveMpdu(Ptr<const WifiMpdu> mpdu,
                     tid = *tids.begin();
                   }
                   m_staMac->GetQosTxop(tid)->UpdateFailedOcw(m_linkId);
+
                   m_raAck = false;
                 }
                 return;

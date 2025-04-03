@@ -177,7 +177,10 @@ class RrMultiUserScheduler : public MultiUserScheduler
 
     uint16_t m_nRaRus; //!< Number of RUs that are reserved for random access
     uint16_t m_nRaRusBtf; //!< Number of RUs that are reserved for random access
-                          //for BasicTF
+                          //after BsrpTF.... This is to simulates Naik's approach
+    bool m_activateNaiks; //!< To use collided or idle RUs from Bsrp in Basic or
+                          //not
+    
     HeRu::RuType m_ruAllocationType; //!< The type of RUs allocated to STAs
 };
 

@@ -75,7 +75,6 @@ void SinrTrace (Mac48Address addr, double sinr)
   g_statsMap[addr].totalBeacons++;
 }
 
-
 void RxTraceWithAddressParam (double logTime, Ptr<const Packet> p, const Address &src, const Address &dst)
 {
   Ptr<Packet> pkt = p->Copy ();
@@ -120,10 +119,12 @@ int main(int argc, char *argv[])
   std::string logDir {"output"};
   double minDistance {1.0}; //meters
   double maxDistance {4.0}; //meters
-  std::size_t totalNStations {1};
+  std::size_t typeOneNStations {40};
+  std::size_t typeTwoNStations {1};
   double apHeight {3}; //meters
   double staHeight {1}; //meters
   double startLogTime = {1.030};
+  bool activateNaiks {false};
 
 
   std::string frequency {"5"}; //whether 2.4, 5 or 6 GHz
@@ -168,10 +169,13 @@ int main(int argc, char *argv[])
   cmd.AddValue ("logDir", "Directory for the output stats files", logDir);
   cmd.AddValue ("minDistance", "Minimum distance in meters between the station and the access point", minDistance);
   cmd.AddValue ("maxDistance", "Maximum distance in meters between the station and the access point", maxDistance);
-  cmd.AddValue ("totalNStations", "Total number of non-AP HE stations", totalNStations);
+  cmd.AddValue ("typeOneNStations", "number of non-AP HE stations that generate CBR traffic", typeOneNStations);
+  cmd.AddValue ("typeTwoNStations", "number of non-AP HE stations that generate sporadic traffic", typeTwoNStations);
   cmd.AddValue ("apHeight", "Height of AP [m]", apHeight);
   cmd.AddValue ("staHeight", "Height of STA [m]", staHeight);
-  cmd.AddValue ("startLogTime","Time to begin logging [seconds]",startLogTime);
+  cmd.AddValue ("startLogTime","Time to begin logging [seconds]", startLogTime);
+  cmd.AddValue ("activateNaiks","True is to not schedule collided or idle RUs of BSRP in BasicTF", activateNaiks);
+
 
 
   //PHY params
@@ -285,7 +289,7 @@ int main(int argc, char *argv[])
    * Create totalNStations of STA and 1 AP
    */
   NodeContainer wifiStaNodes;
-  wifiStaNodes.Create(totalNStations);
+  wifiStaNodes.Create(typeOneNStations + typeTwoNStations);
   NodeContainer wifiApNode;
   wifiApNode.Create(1);
 
@@ -358,9 +362,15 @@ int main(int argc, char *argv[])
 
       Config::SetDefault("ns3::HtFrameExchangeManager::DisableEDCA", BooleanValue(true));
 
-      Config::SetDefault("ns3::HeFrameExchangeManager::MuTxStartTime", TimeValue(Seconds(startLogTime)));
+      Config::SetDefault("ns3::HeFrameExchangeManager::MuTxStartTime", TimeValue(Seconds(startLogTime + 1)));
 
     }
+
+  if (activateNaiks)
+  {
+    Config::SetDefault("ns3::HeFrameExchangeManager::HeActivateNaiks",BooleanValue(true));
+    Config::SetDefault("ns3::RrMultiUserScheduler::ActivateNaiks", BooleanValue(true));
+  }
 
   /*
    * SIFS and Slot time
@@ -382,8 +392,8 @@ int main(int argc, char *argv[])
   if (enableAggregation)
   {
     Config::SetDefault ("ns3::WifiRemoteStationManager::FragmentationThreshold", StringValue ("990000"));
-    Config::SetDefault ("ns3::WifiMac::VO_MaxAmpduSize", UintegerValue (0)); //6500631
-    Config::SetDefault("ns3::WifiMac::VO_MaxAmsduSize", UintegerValue (11398)); //11398
+    Config::SetDefault ("ns3::WifiMac::VO_MaxAmpduSize", UintegerValue (6500631)); //6500631
+    Config::SetDefault("ns3::WifiMac::VO_MaxAmsduSize", UintegerValue (0)); //11398
   }
 
   /*
@@ -466,7 +476,7 @@ int main(int argc, char *argv[])
                                       "AccessReqInterval", TimeValue (MicroSeconds(accessReqInterval)),
                                       "DelayAccessReqUponAccess", BooleanValue (DelayAccessReqUponAccess),
                                       "UseCentral26TonesRus", BooleanValue (UseCentral26TonesRus),
-                                      "NStations", UintegerValue (totalNStations),
+                                      "NStations", UintegerValue (typeOneNStations + typeTwoNStations),
                                       "AccessReqAc",EnumValue(AcIndex::AC_VO),
                                       "RuAllocationType", EnumValue(ruAllocType),
                                       "NumRandomAccessRus", UintegerValue(nRaRus),
@@ -479,7 +489,7 @@ int main(int argc, char *argv[])
                   "Ssid", SsidValue (ssid),
                   "VO_BlockAckThreshold", UintegerValue(0),
                   "BeaconGeneration", BooleanValue(true),
-                  "BsrLifetime", TimeValue(MilliSeconds(5)),
+                  "BsrLifetime", TimeValue(MilliSeconds(20)),
                   "BeaconInterval", TimeValue(MicroSeconds(102400)));
 
       apNetDevice = wifi.Install (phy, wifimac, wifiApNode);
@@ -520,40 +530,73 @@ int main(int argc, char *argv[])
 
 
   double staStartTime = 0;
-
-  for (size_t i = 0; i < totalNStations; i++)
+  double staStartTimeTwo = 0;
+  if (startLogTime)
+    staStartTimeTwo = startLogTime + 1;
+  
+  for (size_t i = 0; i < typeOneNStations + typeTwoNStations; i++)
   {
     staStartTime += 0.00108;
     //InetSocketAddress remoteAddress = InetSocketAddress (serverInterfaces.GetAddress (i), port);
     //remoteAddress.SetTos (0xc0);
     UdpClientHelper staUdpClient (localAddress);
+    UdpClientHelper staUdpClientTwo (localAddress);
+
     staUdpClient.SetAttribute("MaxPackets", UintegerValue(0));
-    staUdpClient.SetAttribute("PacketSize", UintegerValue(ulPayloadSize));
-    if (trafficType == "CBR")
+    staUdpClient.SetAttribute("PacketSize", UintegerValue(700));
+
+    staUdpClientTwo.SetAttribute("MaxPackets", UintegerValue(0));
+    staUdpClientTwo.SetAttribute("PacketSize", UintegerValue(ulPayloadSize));
+
+    if (trafficType == "CBR" && i < typeOneNStations)
     {
       staUdpClient.SetAttribute ("EnableRandom", BooleanValue (false));
       staUdpClient.SetAttribute ("Interval", TimeValue (Seconds (interval)));
+
+      staUdpClientTwo.SetAttribute ("EnableRandom", BooleanValue (false));
+      staUdpClientTwo.SetAttribute ("Interval", TimeValue (Seconds (interval)));
+
     }
     else
     {
       staUdpClient.SetAttribute ("EnableRandom", BooleanValue (true));
+      staUdpClientTwo.SetAttribute ("EnableRandom", BooleanValue (true));
+
+
       std::ostringstream intervalDistr;
-      intervalDistr << "ns3::ExponentialRandomVariable[Mean=" << interval << "|Bound=0]";
+      intervalDistr << "ns3::ExponentialRandomVariable[Mean=" << 0.005 << "|Bound=0]";
       staUdpClient.SetAttribute ("IntervalRandomVariable", StringValue (intervalDistr.str()));
+      staUdpClientTwo.SetAttribute ("IntervalRandomVariable", StringValue (intervalDistr.str()));
+
     }
     ApplicationContainer staUdpclientApp = staUdpClient.Install (wifiStaNodes.Get(i));
+    ApplicationContainer staUdpclientAppTwo = staUdpClientTwo.Install (wifiStaNodes.Get(i));
+
     if (randomStart)
     {
       Ptr<RandomVariableStream> rv = CreateObject<UniformRandomVariable> ();
       rv->SetAttribute("Max", DoubleValue(1.5));
       staUdpclientApp.StartWithJitter (Seconds (1.0), rv);
+      if(startLogTime){
+      //Ptr<UniformRandomVariable> rv2 = CreateObject<UniformRandomVariable> ();
+      //rv2->SetAttribute("Max", DoubleValue(staStartTimeTwo + 1.5));
+      //staUdpclientAppTwo.StartWithJitter (Seconds (staStartTimeTwo), rv2);
+      staUdpclientAppTwo.Start (Seconds (staStartTimeTwo));
+      }
+
     }
     else
     {
       staUdpclientApp.Start (Seconds (staStartTime));
+      if (startLogTime)
+      staUdpclientAppTwo.Start (Seconds (staStartTimeTwo));
     }
-    staUdpclientApp.Stop (Seconds (simulationTime + startLogTime));
-
+    if(startLogTime){
+    staUdpclientApp.Stop (Seconds (startLogTime));
+    staUdpclientAppTwo.Stop (Seconds (simulationTime + staStartTimeTwo));
+    }
+    else
+      staUdpclientApp.Stop (Seconds (simulationTime + startLogTime));
   }
 
   Simulator::Schedule (Seconds (0), &Ipv4GlobalRoutingHelper::PopulateRoutingTables);
@@ -577,14 +620,23 @@ int main(int argc, char *argv[])
       wifi_mac->GetQosTxop(AC_VO)->SetTxopLimit(MicroSeconds(txOpLimits));
     }
 
-  Config::ConnectWithoutContext("/NodeList/*/ApplicationList/*/$ns3::PacketSink/RxWithAddresses", MakeBoundCallback(&RxTraceWithAddressParam, startLogTime));
+  double toLog = (startLogTime) ? staStartTimeTwo : 0;
+  Config::ConnectWithoutContext("/NodeList/*/ApplicationList/*/$ns3::PacketSink/RxWithAddresses", MakeBoundCallback(&RxTraceWithAddressParam, toLog));
 
+
+  Time delay = delayModel->GetDelay(apMobility, wifiStaNodes.Get(0)->GetObject<MobilityModel>());
+  std::cout << "Propagation Delay: " << delay.GetMicroSeconds() << " ms" << std::endl;
 
   //FlowMonitorHelper flowmonHelper;
   //Ptr<FlowMonitor> monitor = flowmonHelper.InstallAll();
-
-  ProgressBar pg (Seconds(simulationTime + startLogTime ));
-  Simulator::Stop (Seconds (simulationTime + startLogTime ));
+  if (startLogTime){
+    ProgressBar pg (Seconds(simulationTime + staStartTimeTwo ));
+    Simulator::Stop (Seconds (simulationTime + staStartTimeTwo ));
+  }
+  else {
+    ProgressBar pg (Seconds(simulationTime + startLogTime ));
+    Simulator::Stop (Seconds (simulationTime + startLogTime ));
+  }
   Simulator::Run ();
 
   //monitor->SerializeToXmlFile("results.xml", true, true);
