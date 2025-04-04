@@ -66,7 +66,12 @@ HeFrameExchangeManager::GetTypeId()
                             .AddAttribute("HeActivateNaiks",
                                 "When true, collided or Idle RUs in BSRP exchange are not used in BasicTF",
                                 BooleanValue(false),
-                                MakeBooleanAccessor(&HeFrameExchangeManager::val),
+                                MakeBooleanAccessor(&HeFrameExchangeManager::m_val),
+                                MakeBooleanChecker())
+                            .AddAttribute("HePartakeInUora",
+                                "When true, STAs take part in UORA",
+                                BooleanValue(false),
+                                MakeBooleanAccessor(&HeFrameExchangeManager::m_partakeInUora),
                                 MakeBooleanChecker())
                             .AddAttribute("MuTxStartTime",
                                 "Time at which to initite Multi-user transmissions",
@@ -181,7 +186,7 @@ HeFrameExchangeManager::StartFrameExchange(Ptr<QosTxop> edca, Time availableTime
           m_mac->GetBaAgreementEstablishedAsOriginator(mpdu->GetHeader().GetAddr1(),
                                                        mpdu->GetHeader().GetQosTid()))))
     {
-        if (val){
+        if (m_val){
           m_muScheduler->SetBtfnRaRus(m_numRaRus);
         }
         txFormat = m_muScheduler->NotifyAccessGranted(edca,
@@ -1972,8 +1977,7 @@ HeFrameExchangeManager::SendQosNullFramesInTbPpdu(CtrlTriggerHeader& trigger,
     NS_ASSERT(m_staMac && m_staMac->IsAssociated());
 
     NS_LOG_DEBUG("Requested to send QoS Null frames");
-
-     if (isRandomAccess)
+     if (isRandomAccess && m_partakeInUora)
     {
         std::vector<uint16_t> raRus;
         uint16_t idx = 0;

@@ -489,7 +489,7 @@ int main(int argc, char *argv[])
                   "Ssid", SsidValue (ssid),
                   "VO_BlockAckThreshold", UintegerValue(0),
                   "BeaconGeneration", BooleanValue(true),
-                  "BsrLifetime", TimeValue(MilliSeconds(20)),
+                  "BsrLifetime", TimeValue(MilliSeconds(2000)),
                   "BeaconInterval", TimeValue(MicroSeconds(102400)));
 
       apNetDevice = wifi.Install (phy, wifimac, wifiApNode);
@@ -564,7 +564,7 @@ int main(int argc, char *argv[])
 
 
       std::ostringstream intervalDistr;
-      intervalDistr << "ns3::ExponentialRandomVariable[Mean=" << 0.005 << "|Bound=0]";
+      intervalDistr << "ns3::ExponentialRandomVariable[Mean=" << 0.100 << "|Bound=0]";
       staUdpClient.SetAttribute ("IntervalRandomVariable", StringValue (intervalDistr.str()));
       staUdpClientTwo.SetAttribute ("IntervalRandomVariable", StringValue (intervalDistr.str()));
 
@@ -574,14 +574,14 @@ int main(int argc, char *argv[])
 
     if (randomStart)
     {
-      Ptr<RandomVariableStream> rv = CreateObject<UniformRandomVariable> ();
+      Ptr<UniformRandomVariable> rv = CreateObject<UniformRandomVariable> ();
       rv->SetAttribute("Max", DoubleValue(1.5));
       staUdpclientApp.StartWithJitter (Seconds (1.0), rv);
       if(startLogTime){
-      //Ptr<UniformRandomVariable> rv2 = CreateObject<UniformRandomVariable> ();
-      //rv2->SetAttribute("Max", DoubleValue(staStartTimeTwo + 1.5));
-      //staUdpclientAppTwo.StartWithJitter (Seconds (staStartTimeTwo), rv2);
-      staUdpclientAppTwo.Start (Seconds (staStartTimeTwo));
+        Ptr<UniformRandomVariable> rv2 = CreateObject<UniformRandomVariable> ();
+        rv2->SetAttribute("Max", DoubleValue(staStartTimeTwo + 0.5));
+        staUdpclientAppTwo.StartWithJitter (Seconds (staStartTimeTwo), rv2);
+        //staUdpclientAppTwo.Start (Seconds (staStartTimeTwo));
       }
 
     }
@@ -612,6 +612,18 @@ int main(int argc, char *argv[])
 
       staNetDevices.Get(i)->GetObject<WifiNetDevice>()->GetPhy()->GetPhyEntity(WIFI_MOD_CLASS_OFDM)->TraceConnectWithoutContext("SinrTrace", MakeBoundCallback (&SinrTrace, Mac48Address::ConvertFrom (staNetDevices.Get (i)->GetAddress ())));
       staNetDevices.Get(i)->GetObject<WifiNetDevice>()->GetPhy()->GetPhyEntity(WIFI_MOD_CLASS_HE)->TraceConnectWithoutContext("SinrTrace", MakeBoundCallback (&SinrTrace, Mac48Address::ConvertFrom (staNetDevices.Get (i)->GetAddress ())));
+
+      if (i >= typeOneNStations){
+
+        Ptr<FrameExchangeManager> fem = wifi_mac->GetFrameExchangeManager(0);
+        if (fem){
+          Ptr<HeFrameExchangeManager> heManager = DynamicCast<HeFrameExchangeManager>(fem);
+
+          if (heManager) {
+          heManager->SetAttribute("HePartakeInUora", BooleanValue(true)); // Enable UORA
+        }
+      }
+    }
     }
   for (uint32_t i = 0; i < apNetDevice.GetN (); i++)
     {
@@ -648,7 +660,7 @@ int main(int argc, char *argv[])
       rxBytes += DynamicCast<PacketSink> (apServerApp.Get (i))->GetTotalRx ();
     }
 
-
+  simulationTime = (staStartTimeTwo) ? simulationTime - staStartTimeTwo : simulationTime;
   double throughput = (rxBytes * 8) / (simulationTime * 1000000.0); //Mbit/s
 
   std::ofstream totalStatsOutStream;

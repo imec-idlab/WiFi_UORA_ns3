@@ -374,12 +374,13 @@ class HeFrameExchangeManager : public VhtFrameExchangeManager
     EventId m_multiStaBaEvent;                    //!< Sending a Multi-STA BlockAck event
     MuSnrTag m_muSnrTag;                          //!< Tag to attach to Multi-STA BlockAck frames
     bool m_triggerFrameInAmpdu; //!< True if the received A-MPDU contains an MU-BAR
-    bool val;
+    bool m_val;
     uint16_t m_numRaRus; //!< number of RA RUs in either BSRP and BasicTF (this
                          //is to track number of SA RUs to use in Basic during
                          //Naiks)
     bool m_raAck; //!< per STA flag to track RA RUs usage in BasicTF TBPDU
                   //transmission
+    bool m_partakeInUora; //flag to allow STAs to take part in the UORA or not
     Time m_muTxStartTime; 
 };
 
