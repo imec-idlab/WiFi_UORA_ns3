@@ -31,6 +31,7 @@
 #include <set>
 #include <unordered_map>
 #include <vector>
+#include <cstdint>
 
 namespace ns3
 {

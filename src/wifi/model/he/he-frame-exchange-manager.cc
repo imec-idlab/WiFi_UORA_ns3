@@ -68,11 +68,6 @@ HeFrameExchangeManager::GetTypeId()
                                 BooleanValue(false),
                                 MakeBooleanAccessor(&HeFrameExchangeManager::m_val),
                                 MakeBooleanChecker())
-                            .AddAttribute("HePartakeInUora",
-                                "When true, STAs take part in UORA",
-                                BooleanValue(false),
-                                MakeBooleanAccessor(&HeFrameExchangeManager::m_partakeInUora),
-                                MakeBooleanChecker())
                             .AddAttribute("MuTxStartTime",
                                 "Time at which to initite Multi-user transmissions",
                                 TimeValue(Seconds(0.0)),
@@ -1977,7 +1972,7 @@ HeFrameExchangeManager::SendQosNullFramesInTbPpdu(CtrlTriggerHeader& trigger,
     NS_ASSERT(m_staMac && m_staMac->IsAssociated());
 
     NS_LOG_DEBUG("Requested to send QoS Null frames");
-     if (isRandomAccess && m_partakeInUora)
+     if (isRandomAccess)
     {
         std::vector<uint16_t> raRus;
         uint16_t idx = 0;

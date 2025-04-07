@@ -58,7 +58,7 @@ RrMultiUserScheduler::GetTypeId()
                           "OFDMA transmission",
                           UintegerValue(4),
                           MakeUintegerAccessor(&RrMultiUserScheduler::m_nStations),
-                          MakeUintegerChecker<uint8_t>(1, 74))
+                          MakeUintegerChecker<uint8_t>(1, 100))
             .AddAttribute("EnableTxopSharing",
                           "If enabled, allow A-MPDUs of different TIDs in a DL MU PPDU.",
                           BooleanValue(true),
@@ -101,8 +101,8 @@ RrMultiUserScheduler::GetTypeId()
                           MakeTimeChecker())
             .AddAttribute("NumRandomAccessRus",
                           "Number of RUs that are reserved for random access",
-                          UintegerValue (0.),
-                          MakeUintegerAccessor (&RrMultiUserScheduler::m_numRaRus),
+                          UintegerValue (0),
+                          MakeUintegerAccessor (&RrMultiUserScheduler::m_nRaRus),
                           MakeUintegerChecker<uint16_t> ())
             .AddAttribute("RuAllocationType",
                           "The type of RUs allocated to STAs, if undefined - dynamically selected based on the number of STAs",
@@ -189,8 +189,7 @@ RrMultiUserScheduler::SelectTxFormat()
     {
         return SU_TX;
     }
-
-    if (m_enableUlOfdma && m_enableBsrp && GetLastTxFormat(m_linkId) != UL_MU_TX)
+    if ( m_enableUlOfdma && m_enableBsrp && ( GetLastTxFormat(m_linkId) != UL_MU_TX) )
     {
         TxFormat txFormat = TrySendingBsrpTf();
 
@@ -200,7 +199,7 @@ RrMultiUserScheduler::SelectTxFormat()
         }
     }
     else if (m_enableUlOfdma && ((GetLastTxFormat(m_linkId) != UL_MU_TX && !m_enableBsrp) ||
-                (GetLastTxFormat(m_linkId) == UL_MU_TX && m_trigger.GetType() == TriggerFrameType::BSRP_TRIGGER)))
+                                 (GetLastTxFormat(m_linkId) == UL_MU_TX && m_trigger.GetType() == TriggerFrameType::BSRP_TRIGGER) ))
     {
         TxFormat txFormat = TrySendingBasicTf();
 

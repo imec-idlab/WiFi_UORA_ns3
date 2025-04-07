@@ -376,6 +376,14 @@ class QosTxop : public Txop
      */
     void StartMuEdcaTimerNow(uint8_t linkId);
     /**
+     * Update the MU EDCA Timer for the given link.
+     *
+     * \param linkId the ID of the given link
+     * \param timer updated reduced timer.
+     */
+    void UpdateMuEdcaTimer(uint8_t linkId, Time timer);
+
+    /**
      * Return true if the MU EDCA Timer is running for the given link, false otherwise.
      *
      * \param linkId the ID of the given link

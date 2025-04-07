@@ -371,6 +371,7 @@ class HtFrameExchangeManager : public QosFrameExchangeManager
 
     Ptr<WifiPsdu> m_psdu;        //!< the A-MPDU being transmitted
     WifiTxParameters m_txParams; //!< the TX parameters for the current frame
+    bool val;
 };
 
 } // namespace ns3

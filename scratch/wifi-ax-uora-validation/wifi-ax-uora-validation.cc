@@ -42,8 +42,6 @@
 #include "ns3/progress-bar.h"
 #include "ns3/seq-ts-header.h"
 #include "ns3/packet-sink.h"
-#include "ns3/packet-tag.h"
-#include "ns3/ap-server-helper.h"
 #include "ns3/flow-monitor-helper.h"
 
 #include "ns3/arp-cache.h"
@@ -56,13 +54,11 @@ struct stats_t
   uint64_t totalBeacons;
   uint64_t rxBytes;
   std::vector<double> pktDelays, genTime, rxTime;
-  std::vector<uint64_t> pktTag;
   std::vector<Mac48Address> src;
 
   //late packet parameters
   uint64_t rxBytesLate;
   std::vector<double> pktDelaysLate, genTimeLate, rxTimeLate;
-  std::vector<uint64_t> pktTagLate;
   std::vector<Mac48Address> srcLate;
 };
 
@@ -80,8 +76,6 @@ void RxTraceWithAddressParam (double logTime, Ptr<const Packet> p, const Address
   Ptr<Packet> pkt = p->Copy ();
 
   SeqTsHeader seqTs;
-  PacketTag tag;
-  pkt->RemovePacketTag(tag);
   pkt->RemoveHeader(seqTs);
   Time startLogTime = Seconds(logTime);
 
@@ -89,7 +83,6 @@ void RxTraceWithAddressParam (double logTime, Ptr<const Packet> p, const Address
 
     g_statsMap[g_Ip2Mac.at (InetSocketAddress::ConvertFrom (src).GetIpv4 ())].rxBytes += p->GetSize ();
     g_statsMap[g_Ip2Mac.at (InetSocketAddress::ConvertFrom (src).GetIpv4 ())].pktDelays.push_back ((Simulator::Now() - seqTs.GetTs ()).GetSeconds ());
-    g_statsMap[g_Ip2Mac.at (InetSocketAddress::ConvertFrom (src).GetIpv4 ())].pktTag.push_back (tag.GetValue());
     g_statsMap[g_Ip2Mac.at (InetSocketAddress::ConvertFrom (src).GetIpv4 ())].genTime.push_back(seqTs.GetTs().GetSeconds() );
     g_statsMap[g_Ip2Mac.at (InetSocketAddress::ConvertFrom (src).GetIpv4 ())].rxTime.push_back(Simulator::Now().GetSeconds());
     g_statsMap[g_Ip2Mac.at (InetSocketAddress::ConvertFrom (src).GetIpv4 ())].src.push_back( g_Ip2Mac.at (InetSocketAddress::ConvertFrom (src).GetIpv4 ()));
@@ -100,27 +93,11 @@ void RxTraceWithAddressParam (double logTime, Ptr<const Packet> p, const Address
 
 int main(int argc, char *argv[])
 {
-  //LogComponentEnable("QosFrameExchangeManager", LOG_LEVEL_DEBUG);
-  //LogComponentEnable("WifiPhyStateHelper", LOG_LEVEL_DEBUG);
-  //LogComponentEnable("WifiMac", LOG_LEVEL_DEBUG);
-  //LogComponentEnable("ApWifiMac", LOG_LEVEL_DEBUG);
-  //LogComponentEnable("PhyEntity", LOG_LEVEL_DEBUG);
-
-  //LogComponentEnable("WifiDefaultAckManager", LOG_LEVEL_DEBUG);
-  //LogComponentEnable("HeFrameExchangeManager", LOG_LEVEL_DEBUG);
-  //LogComponentEnable("HtFrameExchangeManager", LOG_LEVEL_DEBUG);
-  //LogComponentEnable("BlockAckManager", LOG_LEVEL_DEBUG);
-  //LogComponentEnable("ChannelAccessManager", LOG_LEVEL_DEBUG);
-  //LogComponentEnable("QosTxop", LOG_LEVEL_DEBUG);
-  //LogComponentEnable("MpduAggregator", LOG_LEVEL_DEBUG);
-  //LogComponentEnable("QosFrameExchangeManager", LOG_LEVEL_DEBUG);
-
   double simulationTime {10};//seconds
   std::string logDir {"output"};
   double minDistance {1.0}; //meters
   double maxDistance {4.0}; //meters
-  std::size_t typeOneNStations {40};
-  std::size_t typeTwoNStations {1};
+  std::size_t totalNStations {40};
   double apHeight {3}; //meters
   double staHeight {1}; //meters
   double startLogTime = {1.030};
@@ -169,8 +146,7 @@ int main(int argc, char *argv[])
   cmd.AddValue ("logDir", "Directory for the output stats files", logDir);
   cmd.AddValue ("minDistance", "Minimum distance in meters between the station and the access point", minDistance);
   cmd.AddValue ("maxDistance", "Maximum distance in meters between the station and the access point", maxDistance);
-  cmd.AddValue ("typeOneNStations", "number of non-AP HE stations that generate CBR traffic", typeOneNStations);
-  cmd.AddValue ("typeTwoNStations", "number of non-AP HE stations that generate sporadic traffic", typeTwoNStations);
+  cmd.AddValue ("totalNStations", "number of non-AP HE stations that generate CBR traffic", totalNStations);
   cmd.AddValue ("apHeight", "Height of AP [m]", apHeight);
   cmd.AddValue ("staHeight", "Height of STA [m]", staHeight);
   cmd.AddValue ("startLogTime","Time to begin logging [seconds]", startLogTime);
@@ -289,7 +265,7 @@ int main(int argc, char *argv[])
    * Create totalNStations of STA and 1 AP
    */
   NodeContainer wifiStaNodes;
-  wifiStaNodes.Create(typeOneNStations + typeTwoNStations);
+  wifiStaNodes.Create(totalNStations);
   NodeContainer wifiApNode;
   wifiApNode.Create(1);
 
@@ -362,7 +338,7 @@ int main(int argc, char *argv[])
 
       Config::SetDefault("ns3::HtFrameExchangeManager::DisableEDCA", BooleanValue(true));
 
-      Config::SetDefault("ns3::HeFrameExchangeManager::MuTxStartTime", TimeValue(Seconds(startLogTime + 1)));
+      Config::SetDefault("ns3::HeFrameExchangeManager::MuTxStartTime", TimeValue(Seconds(startLogTime)));
 
     }
 
@@ -476,7 +452,7 @@ int main(int argc, char *argv[])
                                       "AccessReqInterval", TimeValue (MicroSeconds(accessReqInterval)),
                                       "DelayAccessReqUponAccess", BooleanValue (DelayAccessReqUponAccess),
                                       "UseCentral26TonesRus", BooleanValue (UseCentral26TonesRus),
-                                      "NStations", UintegerValue (typeOneNStations + typeTwoNStations),
+                                      "NStations", UintegerValue (totalNStations),
                                       "AccessReqAc",EnumValue(AcIndex::AC_VO),
                                       "RuAllocationType", EnumValue(ruAllocType),
                                       "NumRandomAccessRus", UintegerValue(nRaRus),
@@ -489,7 +465,7 @@ int main(int argc, char *argv[])
                   "Ssid", SsidValue (ssid),
                   "VO_BlockAckThreshold", UintegerValue(0),
                   "BeaconGeneration", BooleanValue(true),
-                  "BsrLifetime", TimeValue(MilliSeconds(2000)),
+                  "BsrLifetime", TimeValue(MilliSeconds(200000000)),
                   "BeaconInterval", TimeValue(MicroSeconds(102400)));
 
       apNetDevice = wifi.Install (phy, wifimac, wifiApNode);
@@ -530,73 +506,41 @@ int main(int argc, char *argv[])
 
 
   double staStartTime = 0;
-  double staStartTimeTwo = 0;
-  if (startLogTime)
-    staStartTimeTwo = startLogTime + 1;
   
-  for (size_t i = 0; i < typeOneNStations + typeTwoNStations; i++)
+  for (size_t i = 0; i < totalNStations; i++)
   {
     staStartTime += 0.00108;
-    //InetSocketAddress remoteAddress = InetSocketAddress (serverInterfaces.GetAddress (i), port);
-    //remoteAddress.SetTos (0xc0);
     UdpClientHelper staUdpClient (localAddress);
-    UdpClientHelper staUdpClientTwo (localAddress);
 
     staUdpClient.SetAttribute("MaxPackets", UintegerValue(0));
-    staUdpClient.SetAttribute("PacketSize", UintegerValue(700));
+    staUdpClient.SetAttribute("PacketSize", UintegerValue(ulPayloadSize));
 
-    staUdpClientTwo.SetAttribute("MaxPackets", UintegerValue(0));
-    staUdpClientTwo.SetAttribute("PacketSize", UintegerValue(ulPayloadSize));
-
-    if (trafficType == "CBR" && i < typeOneNStations)
+    if (trafficType == "CBR")
     {
       staUdpClient.SetAttribute ("EnableRandom", BooleanValue (false));
       staUdpClient.SetAttribute ("Interval", TimeValue (Seconds (interval)));
-
-      staUdpClientTwo.SetAttribute ("EnableRandom", BooleanValue (false));
-      staUdpClientTwo.SetAttribute ("Interval", TimeValue (Seconds (interval)));
-
     }
     else
     {
       staUdpClient.SetAttribute ("EnableRandom", BooleanValue (true));
-      staUdpClientTwo.SetAttribute ("EnableRandom", BooleanValue (true));
-
-
       std::ostringstream intervalDistr;
       intervalDistr << "ns3::ExponentialRandomVariable[Mean=" << 0.100 << "|Bound=0]";
       staUdpClient.SetAttribute ("IntervalRandomVariable", StringValue (intervalDistr.str()));
-      staUdpClientTwo.SetAttribute ("IntervalRandomVariable", StringValue (intervalDistr.str()));
-
     }
     ApplicationContainer staUdpclientApp = staUdpClient.Install (wifiStaNodes.Get(i));
-    ApplicationContainer staUdpclientAppTwo = staUdpClientTwo.Install (wifiStaNodes.Get(i));
 
     if (randomStart)
     {
       Ptr<UniformRandomVariable> rv = CreateObject<UniformRandomVariable> ();
       rv->SetAttribute("Max", DoubleValue(1.5));
       staUdpclientApp.StartWithJitter (Seconds (1.0), rv);
-      if(startLogTime){
-        Ptr<UniformRandomVariable> rv2 = CreateObject<UniformRandomVariable> ();
-        rv2->SetAttribute("Max", DoubleValue(staStartTimeTwo + 0.5));
-        staUdpclientAppTwo.StartWithJitter (Seconds (staStartTimeTwo), rv2);
-        //staUdpclientAppTwo.Start (Seconds (staStartTimeTwo));
-      }
-
     }
     else
     {
       staUdpclientApp.Start (Seconds (staStartTime));
-      if (startLogTime)
-      staUdpclientAppTwo.Start (Seconds (staStartTimeTwo));
     }
-    if(startLogTime){
-    staUdpclientApp.Stop (Seconds (startLogTime));
-    staUdpclientAppTwo.Stop (Seconds (simulationTime + staStartTimeTwo));
-    }
-    else
-      staUdpclientApp.Stop (Seconds (simulationTime + startLogTime));
+
+    staUdpclientApp.Stop (Seconds (simulationTime + startLogTime));
   }
 
   Simulator::Schedule (Seconds (0), &Ipv4GlobalRoutingHelper::PopulateRoutingTables);
@@ -613,17 +557,6 @@ int main(int argc, char *argv[])
       staNetDevices.Get(i)->GetObject<WifiNetDevice>()->GetPhy()->GetPhyEntity(WIFI_MOD_CLASS_OFDM)->TraceConnectWithoutContext("SinrTrace", MakeBoundCallback (&SinrTrace, Mac48Address::ConvertFrom (staNetDevices.Get (i)->GetAddress ())));
       staNetDevices.Get(i)->GetObject<WifiNetDevice>()->GetPhy()->GetPhyEntity(WIFI_MOD_CLASS_HE)->TraceConnectWithoutContext("SinrTrace", MakeBoundCallback (&SinrTrace, Mac48Address::ConvertFrom (staNetDevices.Get (i)->GetAddress ())));
 
-      if (i >= typeOneNStations){
-
-        Ptr<FrameExchangeManager> fem = wifi_mac->GetFrameExchangeManager(0);
-        if (fem){
-          Ptr<HeFrameExchangeManager> heManager = DynamicCast<HeFrameExchangeManager>(fem);
-
-          if (heManager) {
-          heManager->SetAttribute("HePartakeInUora", BooleanValue(true)); // Enable UORA
-        }
-      }
-    }
     }
   for (uint32_t i = 0; i < apNetDevice.GetN (); i++)
     {
@@ -632,26 +565,12 @@ int main(int argc, char *argv[])
       wifi_mac->GetQosTxop(AC_VO)->SetTxopLimit(MicroSeconds(txOpLimits));
     }
 
-  double toLog = (startLogTime) ? staStartTimeTwo : 0;
-  Config::ConnectWithoutContext("/NodeList/*/ApplicationList/*/$ns3::PacketSink/RxWithAddresses", MakeBoundCallback(&RxTraceWithAddressParam, toLog));
+  Config::ConnectWithoutContext("/NodeList/*/ApplicationList/*/$ns3::PacketSink/RxWithAddresses", MakeBoundCallback(&RxTraceWithAddressParam, startLogTime));
 
 
-  Time delay = delayModel->GetDelay(apMobility, wifiStaNodes.Get(0)->GetObject<MobilityModel>());
-  std::cout << "Propagation Delay: " << delay.GetMicroSeconds() << " ms" << std::endl;
-
-  //FlowMonitorHelper flowmonHelper;
-  //Ptr<FlowMonitor> monitor = flowmonHelper.InstallAll();
-  if (startLogTime){
-    ProgressBar pg (Seconds(simulationTime + staStartTimeTwo ));
-    Simulator::Stop (Seconds (simulationTime + staStartTimeTwo ));
-  }
-  else {
-    ProgressBar pg (Seconds(simulationTime + startLogTime ));
-    Simulator::Stop (Seconds (simulationTime + startLogTime ));
-  }
+  ProgressBar pg (Seconds(simulationTime + startLogTime ));
+  Simulator::Stop (Seconds (simulationTime + startLogTime ));
   Simulator::Run ();
-
-  //monitor->SerializeToXmlFile("results.xml", true, true);
 
   uint64_t rxBytes = 0;
 
@@ -660,7 +579,6 @@ int main(int argc, char *argv[])
       rxBytes += DynamicCast<PacketSink> (apServerApp.Get (i))->GetTotalRx ();
     }
 
-  simulationTime = (staStartTimeTwo) ? simulationTime - staStartTimeTwo : simulationTime;
   double throughput = (rxBytes * 8) / (simulationTime * 1000000.0); //Mbit/s
 
   std::ofstream totalStatsOutStream;

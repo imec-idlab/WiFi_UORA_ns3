@@ -1693,7 +1693,6 @@ void
 WifiPhy::Send(Ptr<const WifiPsdu> psdu, const WifiTxVector& txVector)
 {
     NS_LOG_FUNCTION(this << *psdu << txVector);
-    std::cout <<"WifiPhy::Send_1" << std::endl;
     Send(GetWifiConstPsduMap(psdu, txVector), txVector);
 }
 
@@ -1786,7 +1785,6 @@ WifiPhy::Send(WifiConstPsduMap psdus, const WifiTxVector& txVector)
     m_endTxEvent =
         Simulator::Schedule(txDuration, &WifiPhy::NotifyTxEnd, this, psdus); // TODO: fix for MU
 
-    std::cout <<"WifiPhy::Send_2" << std::endl;
     StartTx(ppdu);
     ppdu->ResetTxVector();
 

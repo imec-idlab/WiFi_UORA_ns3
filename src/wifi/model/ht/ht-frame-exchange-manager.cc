@@ -47,7 +47,12 @@ HtFrameExchangeManager::GetTypeId()
     static TypeId tid = TypeId("ns3::HtFrameExchangeManager")
                             .SetParent<QosFrameExchangeManager>()
                             .AddConstructor<HtFrameExchangeManager>()
-                            .SetGroupName("Wifi");
+                            .SetGroupName("Wifi")
+                            .AddAttribute("DisableEDCA",
+                                "Disable edca or not by starting MUEDCA timer after a successful EDCA transmission",
+                                BooleanValue(false),
+                                MakeBooleanAccessor(&HtFrameExchangeManager::val),
+                                MakeBooleanChecker());
     return tid;
 }
 

@@ -380,7 +380,6 @@ class HeFrameExchangeManager : public VhtFrameExchangeManager
                          //Naiks)
     bool m_raAck; //!< per STA flag to track RA RUs usage in BasicTF TBPDU
                   //transmission
-    bool m_partakeInUora; //flag to allow STAs to take part in the UORA or not
     Time m_muTxStartTime; 
 };
 

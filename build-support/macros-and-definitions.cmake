@@ -193,6 +193,7 @@ if((NOT CLANG) AND ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang"))
     )
   endif()
   set(CLANG TRUE)
+  add_compile_options(-Wno-error=vla-cxx-extension)
 endif()
 
 if(CLANG)
@@ -219,7 +220,7 @@ unset(below_minimum_msg)
 
 # Set compiler options and get command to force unused function linkage (useful
 # for libraries)
-set(CXX_UNSUPPORTED_STANDARDS 98 11 14)
+set(CXX_UNSUPPORTED_STANDARDS 98 11 14 20 23 26)
 set(CMAKE_CXX_STANDARD_MINIMUM 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(LIB_AS_NEEDED_PRE)
@@ -380,11 +381,13 @@ macro(process_options)
   set(build_profile "${cmakeBuildType}" CACHE INTERNAL "")
   if(${cmakeBuildType} STREQUAL "debug")
     add_definitions(-DNS3_BUILD_PROFILE_DEBUG)
+    #set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wno-error=template-id-cdtor ")
   elseif(${cmakeBuildType} STREQUAL "relwithdebinfo" OR ${cmakeBuildType}
                                                         STREQUAL "default"
   )
     set(cmakeBuildType relwithdebinfo)
-    set(CMAKE_CXX_FLAGS_DEFAULT ${CMAKE_CXX_FLAGS_RELWITHDEBINFO})
+    set(CMAKE_CXX_FLAGS_DEFAULT "${CMAKE_CXX_FLAGS_RELWITHDEBINFO}"
+    "-Wno-error=template-id-cdtor")
     add_definitions(-DNS3_BUILD_PROFILE_DEBUG)
   elseif(${cmakeBuildType} STREQUAL "release")
     if(${NS3_NATIVE_OPTIMIZATIONS})
@@ -438,7 +441,8 @@ macro(process_options)
     else()
       add_compile_options(-Wall) # -Wextra
       if(${NS3_WARNINGS_AS_ERRORS})
-        add_compile_options(-Werror -Wno-error=deprecated-declarations)
+        add_compile_options(-Werror -Wno-error=deprecated-declarations
+          -Wno-error=unused-result)
       endif()
     endif()
   endif()
