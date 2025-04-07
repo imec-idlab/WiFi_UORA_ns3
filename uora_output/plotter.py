@@ -115,7 +115,7 @@ for rarus in [0] + [z for z in range(1, 10, 2)]:
     # Collect data from different runs and STAs
     for runs in range(1, 6):
         for nSta in [z for z in range(9, 101, 9)]:
-            file_path = f"UORA_validation_mcs8_txop2080_pktsize1700/{runs}_run-{nSta}_sta-{rarus}_rarus/throughput.out"
+            file_path = f"uora_validation/{runs}-{nSta}-{rarus}/throughput.out"
             
             if os.path.exists(file_path):
                 df_ap = pd.read_csv(file_path, delimiter="\t")
