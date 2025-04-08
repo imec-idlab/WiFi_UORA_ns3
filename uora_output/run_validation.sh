@@ -4,9 +4,9 @@ set -e
 
 export NS_LOG=""
 
-for run in $(seq 2 2); do
-    for nSta in $(seq 9 9); do
-        for nRaRus  in $(seq 9 9); do
+for run in $(seq 1 5); do
+    for nSta in $(seq 9 9 100); do
+        for nRaRus in 0 $(seq 1 2 9); do
             ./../ns3 run --no-build "scratch/wifi-ax-uora-validation/wifi-ax-uora-validation \
                 --simulationTime=8 --accessCategory=AC_VO --phyModel=Spectrum --channelWidth=20 --mcs=8 --RngRun=${run} \
                 --dlAckType=AGGR-MU-BAR --enableUlOfdma=true --enableBsrp=true --useRts=false \
