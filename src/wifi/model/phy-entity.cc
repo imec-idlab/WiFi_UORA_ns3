@@ -1326,8 +1326,6 @@ PhyEntity::Transmit(Time txDuration,
     NS_LOG_FUNCTION(this << txDuration << ppdu << txPowerDbm << type);
     NS_LOG_DEBUG("Start " << type << ": signal power before antenna gain=" << txPowerDbm << "dBm");
 
-    std::cout << Simulator::Now().As(Time::S) << ":\t PhyEntity::Transmit\t" << ppdu->GetUid() << std::endl;
-
     auto txParams = Create<WifiSpectrumSignalParameters>();
     txParams->duration = txDuration;
     txParams->psd = txPowerSpectrum;

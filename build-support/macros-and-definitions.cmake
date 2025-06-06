@@ -381,13 +381,11 @@ macro(process_options)
   set(build_profile "${cmakeBuildType}" CACHE INTERNAL "")
   if(${cmakeBuildType} STREQUAL "debug")
     add_definitions(-DNS3_BUILD_PROFILE_DEBUG)
-    #set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wno-error=template-id-cdtor ")
   elseif(${cmakeBuildType} STREQUAL "relwithdebinfo" OR ${cmakeBuildType}
                                                         STREQUAL "default"
   )
     set(cmakeBuildType relwithdebinfo)
-    set(CMAKE_CXX_FLAGS_DEFAULT "${CMAKE_CXX_FLAGS_RELWITHDEBINFO}"
-    "-Wno-error=template-id-cdtor")
+    set(CMAKE_CXX_FLAGS_DEFAULT "${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
     add_definitions(-DNS3_BUILD_PROFILE_DEBUG)
   elseif(${cmakeBuildType} STREQUAL "release")
     if(${NS3_NATIVE_OPTIMIZATIONS})
@@ -440,9 +438,15 @@ macro(process_options)
       endif()
     else()
       add_compile_options(-Wall) # -Wextra
+      # Suppress specific warnings entirely
+      add_compile_options(
+        -Wno-deprecated-declarations
+        -Wno-unused-result
+        -Wno-template-id-cdtor
+      )
       if(${NS3_WARNINGS_AS_ERRORS})
-        add_compile_options(-Werror -Wno-error=deprecated-declarations
-          -Wno-error=unused-result)
+        add_compile_options(-Werror) # -Wno-error=deprecated-declarations
+        #-Wno-error=unused-result -Wno-error=template-id-cdtor)
       endif()
     endif()
   endif()
