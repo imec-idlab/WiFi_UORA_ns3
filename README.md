@@ -23,6 +23,12 @@ This repository houses the IEEE 802.11 Uplink OFDMA Random Access (UORA) feature
 ```shell
 ./run_validation.sh
 ```
+- Parallel execution using GNU-Parallel
+  - Change directory into uora_output/gnu-parallel/
+  - Run with
+    ```shell
+    ./job_script.sh params/uora_validation.csv
+    ```
 This runs the simulation in `scratch/wifi-ax-uora-validation/wifi-ax-uora-validation.cc`. Explanations of the parameters are found in the said file.
 At the end of the simulation, data is outputed in the same directory.
 - To plot, run
