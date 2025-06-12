@@ -395,34 +395,6 @@ BlockAckManager::NotifyGotAck(uint8_t linkId, Ptr<const WifiMpdu> mpdu)
 }
 
 void
-BlockAckManager::NotifyGotAckQosNull(uint8_t linkId, Ptr<const WifiMpdu> mpdu)
-{
-    NS_LOG_FUNCTION(this << linkId << *mpdu);
-    NS_ASSERT(mpdu->GetHeader().IsQosData());
-
-    Mac48Address recipient = mpdu->GetOriginal()->GetHeader().GetAddr1();
-    uint8_t tid = mpdu->GetHeader().GetQosTid();
-
-    auto it = m_originatorAgreements.find({recipient, tid});
-    NS_ASSERT(it != m_originatorAgreements.end());
-    NS_ASSERT(it->second.first.IsEstablished());
-
-    it->second.first.NotifyAckedMpdu(mpdu);
-
-    /* remove the acknowledged frame from the queue of outstanding packets
-    for (auto queueIt = it->second.second.begin(); queueIt != it->second.second.end(); ++queueIt)
-    {
-        if ((*queueIt)->GetHeader().GetSequenceNumber() == mpdu->GetHeader().GetSequenceNumber())
-        {
-            m_queue->DequeueIfQueued({*queueIt});
-            //HandleInFlightMpdu(linkId, queueIt, ACKNOWLEDGED, it, Simulator::Now());
-            break;
-        }
-    }*/
-}
-
-
-void
 BlockAckManager::NotifyMissedAck(uint8_t linkId, Ptr<WifiMpdu> mpdu)
 {
     NS_LOG_FUNCTION(this << linkId << *mpdu);
