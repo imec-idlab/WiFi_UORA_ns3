@@ -11,6 +11,8 @@ plt.rcParams.update({'font.size': 15})
 W = 31  # Contention window min
 Wmax = 127 # Contention windwo max
 m = math.floor( math.log2(Wmax / W) )  # Maximum backoff stage
+
+# below are for 20Mhz bandwith
 NRU = 9  # Total Resource Units (RUs) for 20MHz
 E_P = 1700 * 8  # Expected packet size in bits
 
@@ -21,6 +23,24 @@ T_BSR = 0.0912 * 1000
 T_BSR_ACK = 0.036 * 1000
 T_P = 1.5168 * 1000
 T_ACK = 0.036 * 1000
+
+N_RA_values = [0, 1, 3, 5, 7, 9] #  26-tone-RU in 26MHz
+
+# Uncomment below to plot for 80Mhz
+"""
+NRU = 8  # Total Resource Units (RUs) for 20MHz
+E_P = 1700 * 4 * 8  # Expected packet size in bits
+
+# Time durations (in microseconds)
+T_BsrpTF = 0.120 * 1000
+T_BasicTF = 0.120 * 1000
+T_BSR = 0.0624 * 1000
+T_BSR_ACK = 0.036 * 1000
+T_P = 1.6032 * 1000
+T_ACK = 0.036 * 1000
+
+N_RA_values = [0, 1, 3, 5, 8] # 106-tone-Ru in 80MHz
+"""
 SIFS = 16
 delta = 3
 
@@ -56,18 +76,18 @@ def equations(vars, W, N_RA, n_ra):
 
 # Define total STAs range and different RU assignments
 n_values = range(9, 100, 9)
-N_RA_values = [0, 1, 3, 5, 7, 9]
 
 # Store throughput results
 throughput_values = []
 
 # Define consistent colors for each N_RA value
 colors = {
-    0: 'blue', 
-    1: 'green', 
-    3: 'orange', 
-    5: 'purple', 
-    7: 'brown', 
+    0: 'blue',
+    1: 'green',
+    3: 'orange',
+    5: 'purple',
+    7: 'brown',
+    8: 'black',
     9: 'red'
 }
 
@@ -108,8 +128,10 @@ for N_RA in N_RA_values:
     # Plot the throughput for this N_RA setting
     plt.plot(n_values, throughput_values, marker='o', linewidth=2, markersize=5, color=colors[N_RA], label=f'N_RA = {N_RA}')
 
-# Iterate over different RARU values
-for rarus in [0] + [z for z in range(1, 10, 2)]:
+# Iterate over different RARU value
+#list_raru = [0] + [z for z in range(1, 6, 2)] + [8]  #for 80MHz
+list_raru = [0] + [z for z in range(1, 10, 2)]
+for rarus in list_raru:
     dplt = pd.DataFrame()
     
     # Collect data from different runs and STAs
