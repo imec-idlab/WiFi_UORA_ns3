@@ -260,6 +260,9 @@ int main(int argc, char *argv[])
     ruAllocType = HeRu::RU_26_TONE;
   else if (ruAllocationType == "ru-52-tone")
     ruAllocType = HeRu::RU_52_TONE;
+  else if (ruAllocationType == "ru-106-tone")
+    ruAllocType = HeRu::RU_106_TONE;
+
 
   /*
    * Create totalNStations of STA and 1 AP
@@ -368,8 +371,8 @@ int main(int argc, char *argv[])
   if (enableAggregation)
   {
     Config::SetDefault ("ns3::WifiRemoteStationManager::FragmentationThreshold", StringValue ("990000"));
-    Config::SetDefault ("ns3::WifiMac::VO_MaxAmpduSize", UintegerValue (6500631)); //6500631
-    Config::SetDefault("ns3::WifiMac::VO_MaxAmsduSize", UintegerValue (0)); //11398
+    Config::SetDefault ("ns3::WifiMac::VO_MaxAmpduSize", UintegerValue (0)); //6500631
+    Config::SetDefault("ns3::WifiMac::VO_MaxAmsduSize", UintegerValue (11398)); //11398
   }
 
   /*
